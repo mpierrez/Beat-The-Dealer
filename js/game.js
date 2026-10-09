@@ -190,8 +190,8 @@ function payOf(v){const{L,left}=counts(),K=v?L:left-L;return K?{w:left/K,K}:{w:0
 function fx(kind){const e=$('mA');e.classList.remove('hurt','heal');void e.offsetWidth;e.classList.add(kind)}
 function reveal(){
   st.rev=true;const i=st.i,res=G.mag[i],n=G.mag.length,v=st.guess,M=Math.min(8,1+run.streak),m=run.mode;
-  const fl=opt.flash?1:.3;st.flashT=now();st.flashCol=res?`rgba(255,190,200,${.75*fl})`:`rgba(170,215,240,${.6*fl})`;
-  if(res){st.shakeT=now();st.shakeAmp=22*(.6+.1*M)*(opt.shake?1:0)}
+  const fl=opt.flash?1:.3;st.flashT=now();st.flashCol=res?`rgba(255,190,200,${.38*fl})`:`rgba(170,215,240,${.28*fl})`;
+  if(res){st.shakeT=now();st.shakeAmp=12*(.6+.08*M)*(opt.shake?1:0)}
   const{w}=v===null?{w:0}:payOf(v),ok=v!==null&&v===res,dlrTurn=m==='duel'&&st.who==='dlr';
   st.lastM=M;st.lastPay=0;
   if(v!==null)run.calls++;
@@ -319,57 +319,39 @@ function hud(){
   const m=run.mode,t=now(),M=Math.min(8,1+run.streak),sig=`\\Sigma = ${fmtT(run.sigma)}`;let A='',B='',C='';
   const YS=()=>`\\text{YOU}\\;${hearts(run.hp,run.H,CR)}`,DS=()=>`${hearts(run.hpD,run.H,VIO)}\\;\\text{DLR}`;
   if(st.mode==='intro'||st.mode==='reload'){
-    const n=G.mag.length,L=G.mag.reduce((a,b)=>a+b,0),mag=magT(L,n-L);
-    if(m==='survival'){A=`${hearts(run.hp,run.hpMax,CR)}\\quad \\text{mag}_{${run.k}} = ${mag}`;B=`\\text{key: } ${G.scaleTex},\\quad f_{\\text{out}} = f\\cdot 2^{\\,s}`;
-      C=run.k>1?`\\Sigma \\mathrel{+}= ${fmtT(run.magBonus||0)}${run.healed?'\\qquad '+tc(OKC,'\\heartsuit + 1'):''}\\qquad ${sig}`:`${sig}\\qquad \\times ${M}`}
-    else if(m==='duel'){A=`\\mathrm{${roman(run.stage)}}\\quad ${YS()}\\qquad ${DS()}`;B=`\\text{mag} = ${mag}`;
-      C=run.stageCard?`\\text{stage}\\ \\mathrm{${roman(run.stage)}}:\\quad \\heartsuit^{${run.H}}\\ \\text{vs}\\ \\heartsuit^{${run.H}}\\qquad ${sig}`
-        :`\\text{LIVE}\\mapsto\\text{shoot}(\\text{DLR}),\\;\\;\\text{BLANK}\\mapsto\\text{shoot}(\\text{YOU})`}
-    else if(m==='daily'){A=`\\text{seed} = ${run.date.replace(/-/g,'\\text{-}')}\\qquad\\text{mag} = ${mag}`;
-      B=`\\text{${run.mod.name}}:\\quad P_0(\\text{LIVE}) = \\tfrac{${L}}{${n}}`;C=`${sig}\\qquad \\times 1`}
-    else{A=`\\text{mag} = ${mag}`;B=`\\text{this game: } ${G.scaleTex},\\quad f_{\\text{out}} = f\\cdot 2^{\\,s}`;C=`${sig}\\qquad \\times 1`}
+    const n=G.mag.length,L=G.mag.reduce((a,b)=>a+b,0),mag=`\\text{mag} = ${magT(L,n-L)}`;
+    if(m==='survival'){A=`${hearts(run.hp,run.hpMax,CR)}\\qquad ${mag}`;if(run.k>1)C=tc(OKC,'+'+fmtT(run.magBonus||0))+(run.healed?'\\quad '+tc(OKC,'\\heartsuit + 1'):'')}
+    else if(m==='duel'){A=`${YS()}\\qquad ${DS()}`;B=mag;C=run.stageCard?`\\text{stage }\\mathrm{${roman(run.stage)}}`:''}
+    else A=mag;
   }else if(st.mode==='play'||st.mode==='over'){
     const step=(t-st.t0)/SD,sh=G.shells[st.i],{n,L,left}=counts(),res=G.mag[st.i],v=st.guess,dlr=st.who==='dlr';
     const cert=step>=8&&L===left?' = '+tc(CR,'1'):step>=8&&L===0?' = '+tc(CC,'0'):'';
     const P=run.diff==='hard'?`P(\\text{LIVE}) = \\tfrac{?}{${left}}`:run.diff==='easy'?`P(\\text{LIVE}) = \\tfrac{${L}}{${left}} \\approx ${Math.round(100*L/left)}\\%`:`P(\\text{LIVE}) = \\tfrac{${L}}{${left}}${cert}`;
-    // riff line
-    if(!st.rev){if(sh.style==='boss'){const bits=G.mag.map((b,j)=>j<st.i&&!(run.mode==='survival'&&run.k>=7)?b:'?').join('\\,');B=step<16?`${bits} = \\text{this magazine}`:sh.m2}
-                else{const k=run.diff==='easy'?'e':run.diff==='hard'?'h':'m';B=step<16?(sh[k+'1']||sh.m1):(sh[k+'2']||sh.m2)}}
-    else B=res?(sh.style==='boss'?'s=-2:\\;\\; 808 + \\text{saw wall} + \\text{bells}':sh.reese?'s=-2:\\;\\; f/4\\;\\;\\text{LIVE (Reese + 808)}':'s=-2:\\;\\; f/4\\;\\;\\text{LIVE (distorted 808)}')
-              :'s=+1:\\;\\; 2f\\;\\;\\text{BLANK (glass bells + pad)}';
-    const g_=st.gamma>1?'\\cdot 1.25':'',pv=v===null?null:payOf(v),pay=pv&&pv.K?Math.round(100*pv.w*st.gamma*M*D().k):0;
-    let payC;
-    if(v===null)payC=st.locked?`\\text{LOCK}\\;\\Rightarrow\\;\\varnothing`:`\\Delta\\Sigma = 100\\,\\omega\\,\\gamma\\times ${M}`;
-    else if(!pv.K)payC=`P = 0\\;\\Rightarrow\\;\\Delta\\Sigma = 0`;
-    else payC=`\\Delta\\Sigma = 100\\cdot ${pv.K===left?'1':`\\tfrac{${left}}{${pv.K}}`}${g_}\\times ${M} = ${fmtT(pay)}`;
-    let outC;
-    if(st.rev){const ok=v!==null&&v===res,M2=ok?Math.min(8,1+run.streak):1,ML=st.lastM||M;
-      outC=v===null?`\\varnothing\\;\\Rightarrow\\;\\Delta\\Sigma = 0\\qquad\\times ${ML}\\to\\times 1`
-        :ok?`\\Delta\\Sigma = ${tc(OKC,'+'+fmtT(st.lastPay))}\\qquad \\times ${ML}\\to\\times ${M2}`:`\\Delta\\Sigma = ${tc(BADC,'0')}\\qquad \\times ${ML}\\to\\times 1`;
-      if(run.perfect&&st.i===n-1&&step>=40)outC=`\\text{PERFECT}:\\;\\Sigma \\mathrel{+}= ${fmtT(run.perfect)}`}
+    // one formula per riff; after the trigger only what happened to it
+    if(!st.rev){const k=run.diff==='easy'?'e':run.diff==='hard'?'h':'m';
+      B=sh.style==='boss'?G.mag.map((b,j)=>j<st.i&&!(run.mode==='survival'&&run.k>=7)?b:'?').join('\\,'):(sh[k+'1']||sh.m1)}
+    else B=res?`\\text{LIVE}:\\;\\; f\\to f/4`:`\\text{BLANK}:\\;\\; f\\to 2f`;
+    const ok=v!==null&&v===res,gain=ok?tc(OKC,'+'+fmtT(st.lastPay)):v===null?'\\varnothing':tc(BADC,'0');
     if(m==='duel'){
-      A=`\\mathrm{${roman(run.stage)}}\\quad ${dlr?YS():`\\boxed{${YS()}}`}\\qquad ${dlr?`\\boxed{${DS()}}`:DS()}`;
-      if(!st.rev){const tgt=dlr?(run.cpuCall===null?'\\text{DLR}:\\ \\text{shoot}(\\,?\\,)':`\\text{DLR}:\\ \\text{shoot}(\\text{${run.cpuCall?'YOU':'DLR'}})`)
-          :(v===null?'\\text{shoot}(\\,?\\,)':`\\text{shoot}(\\text{${v?'DLR':'YOU'}})`);
-        C=`${P}\\quad ${sig}\\quad \\times ${M}\\quad ${tgt}`}
-      else{const s=run.shot||{},who=s.you?'\\text{YOU}':'\\text{DLR}',tgt=s.c?(s.you?'\\text{DLR}':'\\text{YOU}'):who;
-        let eff=s.res?tc(CR,`\\heartsuit_{${s.c?(s.you?'\\text{DLR}':'\\text{YOU}'):(s.you?'\\text{YOU}':'\\text{DLR}')}} - 1`):(s.c?'\\varnothing':'\\varnothing\\;\\Rightarrow\\;\\text{turn}+1');
-        C=`${who}\\to${tgt}:\\ ${eff}\\qquad ${v!==null?(v===res?tc(OKC,'+'+fmtT(st.lastPay)):tc(BADC,'\\times 1')):sig}`}
-      if(st.mode==='over')C=run.won?`\\heartsuit_{\\text{DLR}} = 0\\;\\Rightarrow\\;\\text{YOU WIN}`:`\\heartsuit_{\\text{YOU}} = 0\\;\\Rightarrow\\;\\lim_{t\\to\\infty} y(t) = 0`;
+      A=`${dlr?YS():`\\boxed{${YS()}}`}\\qquad ${dlr?`\\boxed{${DS()}}`:DS()}`;
+      if(!st.rev)C=`${P}\\qquad ${sig}`+(dlr&&run.cpuCall!==null?`\\qquad \\text{DLR}\\to\\text{${run.cpuCall?'YOU':'DLR'}}`:'');
+      else{const s=run.shot||{},tgt=s.c?(s.you?'DLR':'YOU'):(s.you?'YOU':'DLR');
+        C=(s.res?tc(CR,`\\heartsuit_{\\text{${tgt}}} - 1`):s.c?'\\varnothing':'\\text{turn} + 1')+(v!==null?`\\qquad ${gain}`:'')}
+      if(st.mode==='over')C=run.won?`\\text{YOU WIN}`:`\\heartsuit = 0`;
     }else{
       A=(m==='survival'?`${hearts(run.hp,run.hpMax,CR)}\\quad `:'')+`${P}\\qquad ${sig}`;
-      C=st.rev?outC:payC;
-      if(m==='survival'){C=`\\text{mag}_{${run.k}}\\;\\big|\\;`+C;if(st.rev&&!(v!==null&&v===res))C+=`\\quad ${tc(CR,'\\heartsuit - 1')}`}
-      if(st.mode==='over')C=`\\heartsuit = 0\\;\\Rightarrow\\;\\lim_{t\\to\\infty} y(t) = 0`;
+      C=!st.rev?(M>1?`\\times ${M}`:''):gain+(ok&&M>0?`\\quad \\times ${Math.min(8,1+run.streak)}`:'');
+      if(m==='survival'&&st.rev&&!ok)C+=`\\quad ${tc(CR,'\\heartsuit - 1')}`;
+      if(st.rev&&run.perfect&&st.i===n-1&&step>=40)C=`\\text{PERFECT}\\;\\; ${tc(OKC,'+'+fmtT(run.perfect))}`;
+      if(st.mode==='over')C=`\\heartsuit = 0`;
     }
     // button small lines: payout multipliers (no words)
     if(st.mode==='play'){
       const wl=L?left/L:0,wb=left-L?left/(left-L):0,fx=w=>run.diff==='hard'?'×?':w?'×'+fmtW(w):'×—';
       let sl=fx(wl),sb=fx(wb);
       if(m==='duel'&&!dlr){sl='→DLR '+sl;sb='→YOU '+sb}
-      if(st.rev){const okL=v===1&&res===1,okB=v===0&&res===0;
-        if(v===null){sl=sb=dlr?'':'∅'}
-        else if(v===1)sl=okL?'✓ +'+fmtD(st.lastPay):'✗';else sb=okB?'✓ +'+fmtD(st.lastPay):'✗'}
+      if(st.rev){if(v===null){sl=sb=dlr?'':'∅'}
+        else if(v===1)sl=ok?'✓ +'+fmtD(st.lastPay):'✗';else sb=ok?'✓ +'+fmtD(st.lastPay):'✗'}
       else if(st.locked&&v===null)sl=sb='—';
       setSmall('sL',sl);setSmall('sB',sb)}
   }

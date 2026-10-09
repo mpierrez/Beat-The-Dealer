@@ -88,7 +88,7 @@ function ticks(Ls,cur){
     g.fillStyle=latest?'rgba(140,255,180,.95)':'rgba(70,190,120,.55)';g.fillRect(x,826-h-(latest?6:0),2,h+(latest?6:0))}}
 }
 // shell row (n ≤ 10): revealed shells coloured, current one framed (amber = you, violet = Dealer), under-bar per resolved call, pop on reveal
-const ROW={sp:60,w:36,h:88,top:290},rowX=(j,n)=>360+(j-(n-1)/2)*ROW.sp;
+const ROW={sp:46,w:26,h:64,top:300},rowX=(j,n)=>360+(j-(n-1)/2)*ROW.sp;
 const BAR={ok:'#6dffa0',bad:'#ff6b6b',late:'#ffb347',dlr:'#b06cff'};
 function topRow(t){
   const n=G.mag.length,{w,h,top}=ROW,amn=run&&run.amnesia,play=st.mode==='play',kt=t-(st.t0+PRE*SD);
@@ -98,8 +98,7 @@ function topRow(t){
       if(st.rev&&kt>=0&&kt<.5)dy=-14*Math.exp(-6*kt)*Math.cos(10*kt);
       if(!st.rev){g.save();const fc=st.who==='dlr'?BAR.dlr:'#f0b13a';g.shadowColor=st.who==='dlr'?BAR.dlr:'#ffb52e';g.shadowBlur=18+6*Math.sin(t*8);
         g.strokeStyle=fc;g.lineWidth=2.5;rr(cx-w/2-6,top-6,w+12,h+12,6);g.stroke();g.restore()}}
-    drawShell(cx,top+dy,w,h,kind,gl,play&&j>st.i?.75:1);
-    const r=st.grid[j];if(r&&(j<st.i||st.rev||st.mode==='over')){g.fillStyle=BAR[r]||BAR.late;g.fillRect(cx-w/2,top+h+8,w,4)}}
+    drawShell(cx,top+dy,w,h,kind,gl,play&&j>st.i?.75:1);}
 }
 // shells shown big (live first), shuffled, then flown into the row. plan: shuffle start a, fly start b, landed c; drop: shells drop in one per tick
 // drop: [start, max gap between shells]; text: the reel's "LIVE or BLANK? GUESS RIGHT. ...OR ELSE." sequence
@@ -110,7 +109,7 @@ const dropAt=(plan,j,n)=>plan.drop[0]+j*Math.min(plan.drop[1],(plan.drop[0]<.1?.
 const LOAD0=.5,LOADG=SD,LOADD=SD,loadAt=j=>LOAD0+j*LOADG;
 const smooth=x=>x<=0?0:x>=1?1:x*x*(3-2*x);
 function introVideo(T,n,L){
-  const bs=Math.min(73,600/Math.max(1,n-1)),pos=j=>360+(j-(n-1)/2)*bs,hj=j=>Math.sin(j*12.9898+n*78.233)*.5;
+  const bs=Math.min(62,560/Math.max(1,n-1)),pos=j=>360+(j-(n-1)/2)*bs,hj=j=>Math.sin(j*12.9898+n*78.233)*.5;
   if(T<.45){const al=Math.min(1,Math.max(0,(.42-T)/.12))*Math.min(1,T/.08);
     if(al>0){g.save();g.globalAlpha=al;g.textAlign='center';g.textBaseline='alphabetic';const xl=L?(pos(0)+pos(L-1))/2:360,xb=n-L?(pos(L)+pos(n-1))/2:360;
       g.font='700 30px "Barlow Semi Condensed"';g.shadowBlur=14;
@@ -118,14 +117,14 @@ function introVideo(T,n,L){
       g.shadowBlur=0;g.font='600 15px "Barlow Semi Condensed"';g.fillStyle='#cfd8d2';if(L)g.fillText('the riff drops 2 octaves',xl,768);if(n-L)g.fillText('it turns into bells',xb,768);g.restore()}}
   // queue position: after shell k leaves, the rest slide one slot left (eased, done before the next launch)
   const f=(T-LOAD0)/LOADG,shift=T<LOAD0?0:Math.floor(f)+smooth((f-Math.floor(f))/.75);
-  for(let j=0;j<n;j++){let cx=pos(j),top=578,w=52,h=120,kind=j<L?'live':'blank',gl=.8,al=Math.min(1,T/.08);
+  for(let j=0;j<n;j++){let cx=pos(j),top=578,w=42,h=98,kind=j<L?'live':'blank',gl=.8,al=Math.min(1,T/.08);
     if(T>.28){kind='unknown';gl=0}
     // rattle between the flip and the first launch
     if(T>.3&&T<LOAD0){const e=Math.sin(Math.PI*(T-.3)/(LOAD0-.3));top=578-36*hj(j)*e+Math.sin(T*60+j*2)*5*e;cx+=hj(j+3)*10*e}
     const tl=loadAt(j);
     if(T>=LOAD0&&T<tl)cx=pos(0)+Math.max(0,j-shift)*bs;
     if(T>=tl){const k=Math.min(1,(T-tl)/LOADD),e=1-Math.pow(1-k,3);
-      cx=lerp(pos(0),rowX(j,n),e);top=lerp(578,ROW.top,e)-Math.sin(k*Math.PI)*24;w=lerp(52,ROW.w,e);h=lerp(120,ROW.h,e);
+      cx=lerp(pos(0),rowX(j,n),e);top=lerp(578,ROW.top,e)-Math.sin(k*Math.PI)*24;w=lerp(42,ROW.w,e);h=lerp(98,ROW.h,e);
       if(k>=1)gl=Math.max(0,1.2-(T-tl-LOADD)*5)}
     drawShell(cx,top,w,h,kind,gl,al);
     // landing ring on the slot
@@ -133,7 +132,7 @@ function introVideo(T,n,L){
       g.beginPath();g.arc(rowX(j,n),ROW.top+ROW.h/2,24+22*smooth(kr),0,7);g.stroke();g.restore()}}
 }
 function introDraw(t,T0,n,L,plan){
-  const T=t-T0,bs=Math.min(73,600/Math.max(1,n-1)),pos=j=>360+(j-(n-1)/2)*bs,{a,b,c}=plan;
+  const T=t-T0,bs=Math.min(62,560/Math.max(1,n-1)),pos=j=>360+(j-(n-1)/2)*bs,{a,b,c}=plan;
   if(plan.video){introVideo(T,n,L);introText(T,plan);return}
   if(!st.perm||st.perm.length!==n)st.perm=shuffle([...Array(n).keys()],Math.random);
   // labels under the loaded magazine (fade out when the shuffle starts)
@@ -146,7 +145,7 @@ function introDraw(t,T0,n,L,plan){
       g.shadowBlur=0;g.font='600 15px "Barlow Semi Condensed"';g.fillStyle='#cfd8d2';
       if(L)g.fillText('the riff drops 2 octaves',xl,768);if(n-L)g.fillText('it turns into bells',xb,768);g.restore()}}
   for(let j=0;j<n;j++){
-    const kind0=j<L?'live':'blank';let cx=pos(j),top=578,w=52,h=120,kind=kind0,gl=.8;
+    const kind0=j<L?'live':'blank';let cx=pos(j),top=578,w=42,h=98,kind=kind0,gl=.8;
     if(plan.drop&&T<a){const td=dropAt(plan,j,n);if(T<td)continue;
       // fall, hit the table, small bounce
       const k=(T-td)/.16;top=k<1?lerp(-140,578,k*k):578-18*Math.exp(-(k-1)*1.6)*Math.abs(Math.sin((k-1)*2.4));
@@ -154,7 +153,7 @@ function introDraw(t,T0,n,L,plan){
     if(T>a&&T<b){const k=(T-a)/(b-a),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
       cx=lerp(pos(j),pos(st.perm[j]),e);top=578-Math.sin(e*Math.PI)*(j%2?60:-40)-Math.abs(Math.sin(T*14+j))*10;kind=k>.35?'unknown':kind0;gl=k>.35?0:.8}
     if(T>=b){const k=Math.min(1,(T-b)/(c-b)),e=1-Math.pow(1-k,3);
-      cx=lerp(pos(st.perm[j]),rowX(st.perm[j],n),e);top=lerp(578,ROW.top,e);w=lerp(52,ROW.w,e);h=lerp(120,ROW.h,e);kind='unknown';gl=0}
+      cx=lerp(pos(st.perm[j]),rowX(st.perm[j],n),e);top=lerp(578,ROW.top,e);w=lerp(42,ROW.w,e);h=lerp(98,ROW.h,e);kind='unknown';gl=0}
     drawShell(cx,top,w,h,kind,gl)}
   introText(T,plan);
 }
