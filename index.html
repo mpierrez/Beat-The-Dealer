@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
 <title>Beat The Dealer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@700;800&family=Barlow+Semi+Condensed:wght@600;700&display=swap" rel="stylesheet">
@@ -11,8 +14,6 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<canvas id="amb" width="72" height="128" aria-hidden="true"></canvas>
-<div id="legend"><b>L / ←</b> LIVE<br><b>B / →</b> BLANK<br><b>ESC / P</b> PAUSE<br><b>F</b> FULLSCREEN</div>
 <div id="stage">
   <canvas id="cv" width="720" height="1280"></canvas>
   <div class="abs" id="math"><div id="mA"></div><div id="mB"></div><div id="mC"></div></div>
@@ -28,28 +29,28 @@
     <div class="pill"><span>Buckshot Roulette, but it's math</span></div>
     <div id="press">PRESS START</div>
     <div id="tTag"><span class="L">LIVE</span> OR <span class="B">BLANK?</span> GUESS RIGHT. <span class="L">...OR ELSE.</span></div>
-    <div class="foot">© 2026 Mathys PIERREZ</div>
+    <div id="tMarq"><span id="tMarqTxt"></span></div>
+    <div class="foot">© 2026 MATH ARCADE · ENTER / SPACE / TAP</div>
   </section>
 
   <section class="panel hide" id="scrMenu">
-    <h2>CHOOSE YOUR GAMEMODE</h2>
+    <h2>CHOOSE YOUR TABLE</h2>
     <div id="card"><div id="cName"></div><div id="cTag"></div><canvas id="cVig" width="480" height="200"></canvas>
       <div id="cRules"></div><div id="cBest"></div><div id="cPb"></div><div id="cChip"></div></div>
     <button class="arr" id="mPrev" aria-label="Previous">◀</button><button class="arr" id="mNext" aria-label="Next">▶</button>
     <div id="dots"></div>
-    <div id="mDiff"><button class="arr2" id="dPrev" aria-label="Easier">◀</button><div><div id="dVal"></div><div id="dDesc"></div></div><button class="arr2" id="dNext" aria-label="Harder">▶</button></div>
     <button class="pbtn" id="mPlay">PLAY</button>
-    <div id="mRow"><button class="pbtn sec" id="mHof">HALL OF FAME</button><button class="pbtn sec" id="mHow">HOW TO PLAY</button></div>
+    <div id="mRow"><button class="pbtn sec" id="mBack">BACK</button><button class="pbtn sec" id="mHof">HALL OF FAME</button><button class="pbtn sec" id="mHow">HOW TO PLAY</button></div>
+    <div class="keys">← → TABLE · ENTER PLAY · H HALL OF FAME · ESC BACK</div>
   </section>
 
   <section class="panel hide" id="scrHow">
     <h2>HOW TO PLAY</h2>
     <ol>
-      <li>Every shell is a function <b>f(x)</b>. You see it from x = 0 to the TRIGGER at x = 4.</li>
-      <li>Will <b>f</b> go <b>below 0</b> between x = 4 and x = 8? Yes: call <b class="L">LIVE</b>. No: call <b class="B">BLANK</b>.</li>
-      <li><b class="L">LIVE</b>: the riff falls under the axis into a distorted 808. <b class="B">BLANK</b>: it stays up as glass bells.</li>
-      <li>Solve it: find where f crosses 0 (roots, minimum, sin = −1…). The equation is under the graph.</li>
-      <li>A right call pays 100 points.</li>
+      <li>Every shell plays a riff. Call <b class="L">LIVE</b> or <b class="B">BLANK</b> before the TRIGGER.</li>
+      <li><b class="L">LIVE</b>: the riff drops 2 octaves into a distorted 808. <b class="B">BLANK</b>: it turns into glass bells.</li>
+      <li>Count what's left. The math under the graph is your HUD: P(LIVE), your score Σ, your hearts ♥.</li>
+      <li>A right call pays 100·ω, with ω = 1 / P(your call). Long shots pay more.</li>
       <li>Right calls in a row multiply your payout: ×1 up to ×8. A miss resets it.</li>
       <li>Call right on a kick drum: ON BEAT, ×1.25.</li>
       <li>VS DEALER: <b class="L">LIVE</b> shoots the Dealer, <b class="B">BLANK</b> shoots yourself. A blank on yourself = shoot again.</li>

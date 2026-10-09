@@ -1,91 +1,37 @@
-// Beat The Dealer: main loop, input, auto-pause
+// Beat The Dealer: input handling, keyboard/touch bindings, loop bootstrap
 "use strict";
-// ---------- main loop ----------
-function drawFuse(step){
-  const k=Math.min(1,step/PRE);g.fillStyle='rgba(255,255,255,.12)';const F0=CX-107,FW=214;rr(F0,462,FW,6,3);g.fill();
-  const gr=g.createLinearGradient(F0,0,F0+FW,0);gr.addColorStop(0,'#e8743a');gr.addColorStop(1,'#ff5d8a');g.fillStyle=gr;rr(F0,462,FW*k,6,3);g.fill();
-  g.fillStyle='rgba(255,255,255,.35)';for(let b=1;b<8;b++)g.fillRect(F0+FW*b/8-1,460,2,10);
-  if(run.lam<PRE){g.fillStyle='#ffb347';g.fillRect(F0+FW*run.lam/PRE-2,455,4,20)}
-  if(run.cpuCall!==null&&run.cpuAt!=null){g.fillStyle=COL.v;g.fillRect(F0+FW*Math.min(1,run.cpuAt/PRE)-2,457,4,16)}
-  g.fillStyle='#fff';g.beginPath();g.arc(F0+FW*k,465,7,0,7);g.fill()}
-function drawLock(step){if(!run||run.lam>=PRE||st.rev)return;const x=X(run.lam);
-  g.save();if(step<run.lam)g.setLineDash([6,6]);g.strokeStyle='rgba(255,179,71,.85)';g.lineWidth=2;g.beginPath();g.moveTo(x,GY0+10);g.lineTo(x,GY1);g.stroke();g.restore();
-  g.font='700 13px "Barlow Semi Condensed"';g.textAlign='center';g.fillStyle='#ffb347';g.fillText('LOCK',x,GY0+22)}
-function frame(){
-  const t=now();themeTick();
-  if(run&&!st.paused){
-    if(st.mode==='intro'&&t-st.introT0>=INTRO)startShell(0,st.introT0+INTRO,'you');
-    else if(st.mode==='reload'&&t>=run.segT0+4)startShell(0,run.segT0+4,run.nextWho);
-    else if(st.mode==='over'&&t>=run.segT0+2.2)endRun();
-  }
-  let step=0;
-  if(st.mode==='play'&&!st.paused){step=(t-st.t0)/SD;
-    if(st.who==='dlr'&&run.cpuCall===null&&step>=run.cpuStep)cpuDecide();
-    if(!st.rev&&st.guess===null&&!st.locked&&step>=run.lam){st.locked=1;lockButtons()}
-    if(!st.rev&&step>=PRE)reveal();
-    if(step>=PRE+POST){afterShell(st.t0+(PRE+POST)*SD);if(st.mode==='play')step=(t-st.t0)/SD}}
-  else if(st.mode==='play')step=(t-st.t0)/SD;
-  if(inRun())hud();
-  if(st.mode==='play'){if(!st.rev){const k=Math.max(0,(step-12)/20);st.tintTarget=[lerp(30,95,k),lerp(60,45,k),lerp(40,15,k),.5+.12*k]}
-    else st.tintTarget=G.mag[st.i]?[105,18,38,.5]:[26,62,98,.45]}
-  else if(st.mode==='over')st.tintTarget=run.won?[120,95,20,.6]:[60,10,20,.6];
-  else if(st.mode==='reload')st.tintTarget=[30,60,40,.5];
-  else if(!inRun())st.tintTarget=[30,55,40,.45];
-  background(t);
-  if(st.mode==='intro'||st.mode==='reload'){axes(false,0);
-    introDraw(t,st.mode==='intro'?st.introT0:run.segT0,G.mag.length,G.mag.reduce((a,b)=>a+b,0),st.mode==='intro'?INTRO_PLAN:RELOAD_PLAN)}
-  else if(st.mode==='play'||st.mode==='over'){
-    const cur=st.mode==='over'?PRE+POST:Math.min(step,PRE+POST);
-    axes(true,st.rev?0:Math.max(0,Math.min(.8,(step-14)/6)));
-    if(st.mode==='play')drawLock(step);
-    topRow(t);
-    const res=G.mag[st.i],oc=st.rev?(res?'r':'c'):null;let head=null;
-    // on the reveal a band sweeps left to right and recolours the riff (yellow -> red / cyan) as it passes
-    const tT=st.t0+PRE*SD,bk=st.rev?(t-tT)/.42:1;
-    if(st.rev&&bk<1&&st.mode==='play'){const bx=lerp(GX0-30,GXT+20,Math.max(0,bk));
-      g.save();g.beginPath();g.rect(bx,0,SW,1280);g.clip();for(const l of st.pre)drawLayer(l,Math.min(cur,PRE),null,true);g.restore();
-      g.save();g.beginPath();g.rect(0,0,bx,1280);g.clip();for(const l of st.pre)drawLayer(l,Math.min(cur,PRE),oc,true);g.restore();
-      const bc=res?'255,40,80':'110,230,255',gr=g.createLinearGradient(bx-40,0,bx+14,0);gr.addColorStop(0,`rgba(${bc},0)`);gr.addColorStop(.75,`rgba(${bc},.16)`);gr.addColorStop(1,`rgba(${bc},.38)`);
-      g.fillStyle=gr;g.fillRect(bx-40,GY0-10,54,GY1-GY0+20)}
-    else for(const l of st.pre){const h=drawLayer(l,Math.min(cur,PRE),oc,true);if(!st.rev&&h)head=h}
-    if(st.rev)for(const l of st.post){const h=drawLayer(l,cur,null,false);if(h)head=h}
-    ticks(st.rev?[...st.pre,...st.post]:st.pre,cur);
-    if(head&&st.mode==='play')dot(head.x,head.y,head.col);
-    if(st.rev&&st.mode==='play'){const pk=Math.max(0,1-(t-st.t0-PRE*SD)/.5);if(pk>0)dot(GXT,res?740:600,res?COL.r:COL.c,10,pk)}
-    if(st.mode==='play'&&!st.rev)drawFuse(step);
-    if(st.mode==='over'){const k=Math.min(1,(t-run.segT0)/2),c=run.won?'#ffd84a':'#ff3d6e';
-      g.beginPath();g.moveTo(GX0,668);g.lineTo(lerp(GX0,GX1,k),668);glowStroke(c,3)}
-  }else if(st.mode==='title')titleScene(t);
-  else{ // menus: idle magazine
-    for(let j=0;j<8;j++)drawShell(CX-256+j*73,578+Math.sin(t*2+j)*2,42,98,j<4?'live':'blank',.25,.35)}
-  if(theme&&theme.pulse&&t>=theme.pulse&&t-theme.pulse<.05&&st.mode==='title'){const l=$('logo');l.classList.remove('pulse');void l.offsetWidth;l.classList.add('pulse');theme.pulse=0}
-  if(st.mode==='title')$('press').style.visibility=(performance.now()/1000%1)<.6?'visible':'hidden';
-  const fl=opt.flash?1:.3,fa=Math.max(0,1-(t-st.flashT)/.45),fe=$('flash');fe.style.background=st.flashCol;fe.style.opacity=fa*(st.flashCol.includes('255,60,90')?fl:1);
-  const sk=st.paused||!opt.shake?0:Math.max(0,1-(t-st.shakeT)/.5),s=stage.dataset.s,A=st.shakeAmp||22;
-  const ab=st.paused?0:Math.max(0,1-(t-st.shakeT)/.25),zoom=1+.012*ab*ab;   // chromatic split + punch-in on every LIVE hit
-  stage.style.transform=`translate(-50%,-50%) scale(${s*zoom}) translate(${(Math.random()-.5)*A*sk}px,${(Math.random()-.5)*A*sk}px)`;
-  if(ab>0){const d=(1+4*ab).toFixed(1);$('rgbR').setAttribute('dx',d);$('rgbC').setAttribute('dx',-d);$('rgbR').setAttribute('dy','0')}
-  const fil=(ab>0?'url(#rgbx) ':'')+(sk>0?`saturate(${1+sk}) contrast(${1+.2*sk})`:'');if(stage.style.filter!==fil)stage.style.filter=fil;
-  // edges glow with the drop: red pulses on every kick after a LIVE, cold blue after a BLANK
-  let vg='radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,.75) 100%)';
-  if(st.mode==='play'&&st.rev){const ph=(((t-st.t0)/SD)%4+4)%4*SD,pu=Math.exp(-ph*7),live=G.mag[st.i];
-    vg=live?`radial-gradient(ellipse at center,transparent ${50-3*pu}%,rgba(${110+40*pu|0},0,25,${(.32+.14*pu).toFixed(2)}) 100%)`
-           :`radial-gradient(ellipse at center,transparent 42%,rgba(10,45,90,${(.32+.06*pu).toFixed(2)}) 100%)`}
-  else if(st.mode==='over'&&!run.won)vg='radial-gradient(ellipse at center,transparent 35%,rgba(120,0,20,.8) 100%)';
-  const ve=$('vig');if(ve._v!==vg){ve._v=vg;ve.style.background=vg}
-  if(st.mode==='init'&&performance.now()>ini.deadline)initConfirm();
-  grain();ambient();requestAnimationFrame(frame);
-}
-const gc=$('grain').getContext('2d'),gimg=gc.createImageData(180,320);let gf=0;
-// desktop backdrop: a tiny copy of the game canvas, blurred by CSS, fills the space around the portrait stage
-const amb=document.getElementById('amb'),ambG=amb.getContext('2d');let af=0;
-function ambient(){if(af++%6||innerWidth<innerHeight)return;ambG.drawImage(cv,0,0,72,128)}
-function grain(){if(gf++%2)return;const d=gimg.data;for(let i=0;i<d.length;i+=4){const v=Math.random()*255|0;d[i]=d[i+1]=d[i+2]=v;d[i+3]=255}gc.putImageData(gimg,0,0)}
-
 // ---------- input ----------
 let uiLock=0;const tap=(id,fn)=>$(id).addEventListener('click',e=>{e.stopPropagation();if(performance.now()<uiLock)return;fn()});
-$('scrTitle').addEventListener('pointerdown',()=>{if(st.mode==='title')goMenu()});
-tap('mPrev',()=>menuMove(-1));tap('dPrev',()=>setDiff(-1));tap('dNext',()=>setDiff(1));tap('mNext',()=>menuMove(1));tap('mPlay',menuPlay);tap('card',menuPlay);
+function ensureTitleAudio(){
+  initAudio();
+  if(!ctx)return;
+  if(ctx.state!=='running'){
+    ctx.resume().then(()=>{
+      if(st.mode==='title'){
+        if(!theme)themeStart();
+        else if(theme)theme.next=ctx.currentTime+.02;
+        themeMuffle(18000);
+      }
+    });
+  }else if(st.mode==='title'){
+    if(!theme)themeStart();
+    themeMuffle(18000);
+  }
+}
+try{ensureTitleAudio()}catch(e){}
+['pointerdown','touchstart','touchend','mousedown','mouseup','keydown','click'].forEach(evt=>{
+  window.addEventListener(evt,ensureTitleAudio,{passive:true});
+});
+$('scrTitle').addEventListener('click',e=>{
+  ensureTitleAudio();
+  if(st.mode!=='title')return;
+  const onStart=e.target.id==='press'||e.target.closest('#press');
+  if(onStart){
+    goMenu();
+  }
+});
+tap('mPrev',()=>menuMove(-1));tap('mNext',()=>menuMove(1));tap('mPlay',menuPlay);tap('card',menuPlay);
+tap('mBack',()=>{V.tick(now(),.6);goTitle()});
 tap('mHof',()=>hofOpen(MODE_KEYS[menuIdx]));tap('mHow',()=>howOpen(false));tap('hBack',howClose);
 let swipeX=null;$('card').addEventListener('pointerdown',e=>{swipeX=e.clientX});
 $('card').addEventListener('pointerup',e=>{if(swipeX!==null&&Math.abs(e.clientX-swipeX)>60/(+stage.dataset.s||1)){menuMove(e.clientX<swipeX?1:-1);swipeX=-1e9}else swipeX=null});
@@ -110,11 +56,10 @@ addEventListener('keydown',e=>{const k=e.key.toLowerCase();
     if(k==='escape'||k==='p'){pauseGame();return}
     if(st.mode==='play'){if(k==='l'||k==='arrowleft')call(1);else if(k==='b'||k==='arrowright')call(0)}
     return}
-  if(k==='f'&&st.mode!=='init'&&!inRun()){try{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}catch(_){}return}
   if(e.repeat&&st.mode!=='init')return;
   switch(st.mode){
     case'title':if(!['shift','control','alt','meta','tab'].includes(k))goMenu();break;
-    case'menu':if(k==='arrowleft')menuMove(-1);else if(k==='arrowright')menuMove(1);else if(k==='enter'||k===' ')menuPlay();else if(k==='arrowup')setDiff(1);else if(k==='arrowdown')setDiff(-1);
+    case'menu':if(k==='arrowleft')menuMove(-1);else if(k==='arrowright')menuMove(1);else if(k==='enter'||k===' ')menuPlay();
       else if(k==='h')hofOpen(MODE_KEYS[menuIdx]);else if(k==='?'||k==='i')howOpen(false);else if(k==='escape'){V.tick(now(),.6);goTitle()}break;
     case'how':if(k==='escape'||k==='enter'||k===' ')howClose();break;
     case'hof':if(k==='arrowleft'||k==='arrowright'){hof.tab=(hof.tab+(k==='arrowleft'?-1:1)+4)%4;hof.hi=-1;V.tick(now(),.8);hofRender()}
@@ -128,7 +73,23 @@ addEventListener('keydown',e=>{const k=e.key.toLowerCase();
 // auto-pause: tab hidden or window blurred during a run; outside a run just suspend/resume the audio clock
 document.addEventListener('visibilitychange',()=>{if(!ctx)return;
   if(document.hidden){if(inRun())pauseGame();else ctx.suspend()}
-  else if(!st.paused&&!inRun())ctx.resume()});
+  else{ctx.resume();if(inRun()&&st.paused)resumeGame()}});
 addEventListener('blur',()=>{if(inRun())pauseGame()});
-titleRender();show('scrTitle');
+// proactive AudioContext resume for mobile touch
+['touchstart','touchend'].forEach(evt=>{
+  document.addEventListener(evt,()=>{if(ctx&&ctx.state==='suspended')ctx.resume()},{passive:true});
+});
+// mobile hardware / browser back button navigation: return to main menu or title
+try{history.replaceState({screen:'app'},'');history.pushState({screen:'app'},'')}catch(e){}
+window.addEventListener('popstate',()=>{
+  try{history.pushState({screen:'app'},'')}catch(e){}
+  if(inRun()||st.mode==='play'||st.mode==='intro'||st.mode==='reload'||st.mode==='over'||st.mode==='results'){
+    st.paused=false;$('scrPause').classList.add('hide');if(run)killRoute(run.route);if(ctx)ctx.resume();
+    st.tintTarget=[30,55,40,.45];goMenu();
+  }else if(st.mode==='how'){howClose();
+  }else if(st.mode==='hof'){hofBack(false);
+  }else if(st.mode==='init'){goMenu();
+  }else if(st.mode==='menu'){V.tick(now(),.6);goTitle();}
+});
+goTitle();
 requestAnimationFrame(frame);

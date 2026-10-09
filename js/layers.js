@@ -3,13 +3,6 @@
 // ---------- layers: one note list drives both the picture and the sound ----------
 function layers(i,phase,res,who='you'){
   const sh=G.shells[i],a=phase==='pre'?0:PRE,L=[],dl=who==='dlr',n=G.mag.length;
-  if(sh.style==='eq'){
-    if(phase==='pre')L.push({mode:'step',voice:dl?'dlead':'lead',col:dl?'v':'y',notes:sh.n});
-    else if(res)L.push({mode:'step',voice:'k808',col:'r',notes:sh.np.map(n=>({...n,p:n.p-12}))});
-    else L.push({mode:'step',voice:'bell',col:'c',notes:sh.np.map(n=>({...n,p:n.p+12}))},
-                {mode:'none',voice:'pad',notes:[{s:a,d:16,deg:sh.pr[0]},{s:a+16,d:16,deg:sh.pr[1]}]});
-    return L;
-  }
   if(sh.style==='boss'){
     const hits=[],top=[],cyc=[0,4,7,2],sp=Math.floor(32/n);let h=0;
     for(let k=0;k<n;k++){const s=a+k*sp;top.push({s,d:sp-1,p:15});if(G.mag[k])hits.push({s,d:sp-1,p:semis(fitOct(sh.pr[k<n/2?0:1],0,5)+cyc[h++%4])})}
@@ -73,4 +66,3 @@ function setTex(el,s){if(el._s===s)return;el._s=s;
   else if(window.katex)try{katex.render(s,el,{throwOnError:false})}catch(e){el.textContent=texToPlain(s)}
   else el.textContent=texToPlain(s);
   el.style.transform='';const w=el.scrollWidth;if(w>680)el.style.transform=`scale(${680/w})`}
-

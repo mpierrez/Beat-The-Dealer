@@ -1,17 +1,16 @@
-// Beat The Dealer: state, modes, difficulty, leaderboard, title theme, screens, run logic, HUD, pause
+// Beat The Dealer: game state, modes, leaderboard, title theme, screens, run logic, math HUD
 "use strict";
 // ---------- state ----------
 const st={mode:'title',i:0,t0:0,rev:false,guess:null,grid:[],pre:[],post:[],introT0:0,paused:false,who:'you',locked:0,gamma:1,
   flashT:-9,flashCol:'',shakeT:-9,shakeAmp:22,tint:[30,60,40,.5],tintTarget:[30,60,40,.5],perm:null,introFlash:0};
 let run=null;   // the current run; null before the first run
-const now=()=>ctx?ctx.currentTime:performance.now()/1000;
 const RUN_STATES=['intro','reload','play','over'];
 const inRun=()=>RUN_STATES.includes(st.mode);
 
 // ---------- modes ----------
 const MODES={
   classic:{name:'CLASSIC',col:'#e8195a',tag:'The reel. Count. Call. Cash in.',
-    rules:['8 shells. Each one is a function f(x).','Will f go below 0 after the trigger?','Below 0 = LIVE. Stays above = BLANK.']},
+    rules:['8 shells: 4 live, 4 blank, shuffled.','Call each one before the trigger.','Long shots pay more. Streaks multiply.']},
   survival:{name:'SURVIVAL',col:'#ff3d6e',tag:"Dead man's magazine.",
     rules:['Magazine after magazine. 3 hearts.','A miss costs a heart. A perfect magazine heals.','The lock creeps closer. The key keeps rising.']},
   duel:{name:'VS DEALER',col:'#b06cff',tag:'One gun. Two players. Buckshot rules.',
@@ -20,13 +19,6 @@ const MODES={
     rules:['Same magazine for everyone today.','One ranked attempt, then practice.']},
 };
 const MODE_KEYS=['classic','survival','duel','daily'];
-// difficulty: EASY = plain-words formulas, P(LIVE) in %, wider beat window; HARD = dense formulas, P(LIVE) hidden (count yourself)
-const DIFFS={easy:{name:'EASY',col:'#6dffa0',k:.75,win:.12,blunder:[.4,.25,.12],lamD:0,desc:'Straight lines. Wide beat window. Score ×0.75'},
-  normal:{name:'NORMAL',col:'#f6d342',k:1,win:.07,blunder:[.25,.12,0],lamD:0,desc:'Parabolas and sines. Score ×1'},
-  hard:{name:'HARD',col:'#ff3d6e',k:1.5,win:.05,blunder:[.08,0,0],lamD:4,desc:'Mixed functions. Earlier lock. Score ×1.5'}};
-const DIFF_KEYS=['easy','normal','hard'];let DIFF=DIFF_KEYS.includes(store.get('diff','normal'))?store.get('diff','normal'):'normal';
-const D=()=>DIFFS[(run&&run.diff)||DIFF];
-function setDiff(d){DIFF=DIFF_KEYS[(DIFF_KEYS.indexOf(DIFF)+d+3)%3];store.set('diff',DIFF);if(ctx)V.tick(now(),1);menuRender()}
 const MODS=[{name:'STANDARD',n:8,L:4,d:'4 live, 4 blank.'},{name:'HEAVY LOAD',n:8,L:6,d:'6 live, 2 blank.'},
             {name:'DRY SPELL',n:8,L:2,d:'2 live, 6 blank.'},{name:'TEN-GAUGE',n:10,L:5,d:'10 shells, 5 live.'}];
 const today=()=>{const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
@@ -49,7 +41,7 @@ function saveTable(mode,date,t){
 const cmpE=(a,b)=>b.s-a.s||a.t-b.t;
 function qualifies(mode,date,s){if(s<=0)return false;const t=table(mode,date);return t.length<10||s>t[Math.min(9,t.length-1)].s}
 function insertE(mode,date,e){const t=table(mode,date);t.push(e);t.sort(cmpE);const r=t.slice(0,10);saveTable(mode,date,r);return r.indexOf(e)}
-const fmtD=n=>String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,' ');
+const fmtD=n=>String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,'\u2009');
 const fmtT=n=>String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,'\\,');
 const ord=r=>r+(r===1?'ST':r===2?'ND':r===3?'RD':'TH');
 const roman=s=>['I','II','III'][s-1]||String(s);
@@ -57,19 +49,35 @@ const roman=s=>['I','II','III'][s-1]||String(s);
 // ---------- title theme: Fm → G♭ loop, kicks, glass bells (same voices as the game) ----------
 let theme=null;
 const THEME_G={scale:SCALES[0].s,scaleTex:'',key:0,shells:[],mag:[]},THEME_PROG=[0,1,0,5];
-function themeStart(){if(!ctx||theme)return;theme={route:mkRoute(menuLP,.85),next:now()+.15,bar:0}}
+function themeStart(){
+  if(!ctx)initAudio();
+  if(!ctx)return;
+  if(theme)killRoute(theme.route);
+  theme={route:mkRoute(menuLP,.9),next:(ctx.state==='running'?ctx.currentTime:0)+.02,bar:0};
+  themeMuffle(18000);
+}
 function themeStop(t){if(!theme)return;killRoute(theme.route,t);theme=null}
-function themeMuffle(hz){if(menuLP&&ctx)menuLP.frequency.setTargetAtTime(hz,now(),.12)}
+function themeMuffle(hz){
+  if(menuLP&&ctx){
+    try{
+      menuLP.frequency.cancelScheduledValues(ctx.currentTime);
+      menuLP.frequency.setTargetAtTime(hz,ctx.currentTime,.1);
+    }catch(e){
+      menuLP.frequency.value=hz;
+    }
+  }
+}
 function themeTick(){
-  if(!theme||ctx.state!=='running')return;
-  if(theme.next<now())theme.next=now()+.05;
-  while(theme.next<now()+1.2){const t=theme.next,b=theme.bar++,deg=THEME_PROG[b%4];
+  if(!theme||!ctx||ctx.state!=='running')return;
+  const tc=ctx.currentTime;
+  if(theme.next<tc)theme.next=tc+.02;
+  while(theme.next<tc+1.2){const t=theme.next,b=theme.bar++,deg=THEME_PROG[b%4];
     withG(THEME_G,()=>routeTo(theme.route,()=>{
-      V.pad(t,deg,2,.9);
-      for(let k=0;k<4;k++){V.kick(t+k*.5,k%2?.45:.85);if(b%4>0)V.hat(t+k*.5+.25,.45)}
+      V.pad(t,deg,2,1.2);
+      for(let k=0;k<4;k++){V.kick(t+k*.5,k%2?.5:1);if(b%4>0)V.hat(t+k*.5+.25,.5)}
       const T=[deg,deg+2,deg+4,deg+7].map(d=>semis(fitOct(d,0,6)));
       const pat=b%2?[0,1,2,3,2,1,2,3]:[3,2,1,0,1,2,1,0];
-      for(let k=0;k<8;k++)if(k%2===0||Math.random()<.45)V.bell(t+k*.25,T[pat[k]]+12,.25,.42);
+      for(let k=0;k<8;k++)if(k%2===0||Math.random()<.45)V.bell(t+k*.25,T[pat[k]]+12,.25,.6);
       if(b%8===7)V.riser(t+1,1);
       if(b%8===0&&b>0){V.dryfire(t);theme.pulse=t}}));
     theme.next+=2}}
@@ -81,8 +89,9 @@ let menuIdx=Math.max(0,MODE_KEYS.indexOf((store.get('last',{})||{}).mode));
 function titleRender(){
   const hi=table('classic')[0],last=store.get('last',{})||{};
   $('t1up').textContent='1UP '+String(last.s||0).padStart(6,'0');$('tHi').textContent=String(hi?hi.s:0).padStart(6,'0');
-  $('tCred').textContent=ctx?'01':'00';}
-function goTitle(){st.mode='title';show('scrTitle');themeMuffle(18000);titleRender();hideGame()}
+  $('tCred').textContent=ctx?'01':'00';
+  $('tMarqTxt').textContent=MODE_KEYS.map(m=>{const e=table(m)[0];return`${MODES[m].name} 1ST ${e?e.n+' '+fmtD(e.s):'—'}`}).join('   ·   ')}
+function goTitle(){initAudio();if(ctx&&ctx.state!=='running')ctx.resume();st.mode='title';show('scrTitle');if(!theme)themeStart();themeMuffle(18000);titleRender();hideGame()}
 function goMenu(){initAudio();ctx.resume();uiLock=performance.now()+400;if(st.mode==='title')V.rack(now());
   st.mode='menu';show('scrMenu');themeStart();themeMuffle(2600);menuRender();hideGame()}
 function hideGame(){$('ctrl').style.display='none';$('pauseBtn').style.display='none';for(const id of['mA','mB','mC'])setTex($(id),'')}
@@ -95,7 +104,6 @@ function menuRender(){
   $('cRules').innerHTML=rules.map(r=>`<div>${r}</div>`).join('');
   const best=table(k)[0];$('cBest').textContent=best?`BEST   ${best.n}   ${fmtD(best.s)}`:'BEST   —';
   const pb=(store.get('pb',{})||{})[k];$('cPb').textContent=`YOUR BEST ${pb?fmtD(pb):'—'}`;$('cChip').textContent=chip;
-  const Dd=DIFFS[DIFF];$('dVal').textContent='DIFFICULTY: '+Dd.name;$('dVal').style.color=Dd.col;$('dDesc').textContent=Dd.desc;
   $('dots').innerHTML=MODE_KEYS.map((_,j)=>`<i class="${j===menuIdx?'on':''}"></i>`).join('');
   onCtx($('cVig').getContext('2d'),()=>{g.clearRect(0,0,480,200);
     if(k==='classic')for(let j=0;j<8;j++)drawShell(240+(j-3.5)*54,40,36,100,j<4?'live':'blank',.5);
@@ -134,7 +142,7 @@ function startRun(mode){
   const tb=now()+.15;themeStop(tb);
   if(run)killRoute(run.route);
   const date=today();
-  run={mode,diff:DIFF,route:mkRoute(bus),date,sigma:0,shown:0,streak:0,bestM:1,correct:0,calls:0,shells:0,onBeat:0,maxW:0,late:0,
+  run={mode,route:mkRoute(bus),date,sigma:0,shown:0,streak:0,bestM:1,correct:0,calls:0,shells:0,onBeat:0,maxW:0,late:0,
     hp:3,hpMax:5,k:1,magOk:true,stage:1,H:2,hpD:2,nextWho:'you',hits:0,extra:0,stageHurt:false,won:false,perfect:0,lam:32,
     ranked:false,practice:false,mod:null,qual:false,cpuStep:null,cpuCall:null,segT0:0,stageCard:false};
   const last=store.get('last',{})||{};last.mode=mode;store.set('last',last);
@@ -162,39 +170,41 @@ function startShell(i,t0,who='you'){
   routeTo(run.route,()=>{schedule(st.pre,t0);schedule(st.post,t0);drums(t0,'pre');drums(t0,'post',res);
     const tt=t0+PRE*SD;if(res)V.gunshot(tt);else V.dryfire(tt);V.clink(tt)});
   run.cpuStep=who==='dlr'?8+rnd(17):null;run.cpuCall=null;
-  run.lam=run.mode==='survival'?Math.max(16,(run.k<=3?32:run.k<=5?28:run.k<=7?24:20)-(run.k>1?D().lamD:0)):32;
+  run.lam=run.mode==='survival'?Math.max(16,(run.k<=3?32:run.k<=5?28:run.k<=7?24:20)):32;
   $('ctrl').style.display='flex';
   for(const id of['bL','bB']){const b=$(id);b.disabled=false;b.className='btn '+(id==='bL'?'live':'blank')+(who==='dlr'?' call':'')}
   hud();
 }
+function onBeat(t){const ph=((t-st.t0)/SD)%4;return ph<.07||ph>3.93}
 function call(v){
-  if(st.mode!=='play'||st.paused||st.rev||st.guess!==null)return;
-  const step=(now()-st.t0)/SD;if(step<0||step>=run.lam)return;
-  st.guess=v;
-  const tp=now()-(ctx.outputLatency||ctx.baseLatency||0),pos=(tp-st.t0)/SD,r=((pos%4)+4)%4,dl=Math.min(r,4-r)*SD;
-  st.gamma=dl<=D().win?1.25:1;
-  const me=$(v?'bL':'bB'),ot=$(v?'bB':'bL');me.classList.add('on');ot.classList.add('off');
+  if(st.mode!=='play'||st.rev||st.guess!==null||st.who==='dlr'||st.locked)return;
+  const t=now(),step=(t-st.t0)/SD;if(step>=PRE)return;
+  st.guess=v;st.gamma=onBeat(t)?1.25:1;
+  const me=v?$('bL'):$('bB'),ot=v?$('bB'):$('bL');
+  me.classList.add('on');
+  ot.classList.add('off');
   for(const b of[me,ot])b.disabled=true;
   if(st.gamma>1){V.rim(now());me.classList.add('gold');setTimeout(()=>me.classList.remove('gold'),160)}else V.tick(now(),1.5);
   hud();
 }
 function lockButtons(){for(const id of['bL','bB']){const b=$(id);b.disabled=true;b.classList.add('off')}}
+const CPU_BLUNDER=[.25,.12,0];
 function cpuDecide(){
-  // the Dealer reads the equation too; he slips sometimes (less in later stages)
-  const res=G.mag[st.i];let c=res;
-  if(Math.random()<.18+D().blunder[run.stage-1])c=1-res;
+  const{L,left}=counts(),P=L/left;
+  let c=P===1?1:P===0?0:P>.5?1:P<.5?0:(Math.random()<.5?1:0);
+  if(P>0&&P<1&&Math.random()<CPU_BLUNDER[run.stage-1])c=Math.random()<.5?1:0;
   run.cpuCall=c;run.cpuAt=(now()-st.t0)/SD;V.tick(now(),1);
 }
-function payOf(v){return{w:1,K:1}}
+function payOf(v){const{L,left}=counts(),K=v?L:left-L;return K?{w:left/K,K}:{w:0,K:0}}
 function fx(kind){const e=$('mA');e.classList.remove('hurt','heal');void e.offsetWidth;e.classList.add(kind)}
 function reveal(){
   st.rev=true;const i=st.i,res=G.mag[i],n=G.mag.length,v=st.guess,M=Math.min(8,1+run.streak),m=run.mode;
-  const fl=opt.flash?1:.3;st.flashT=now();st.flashCol=res?`rgba(255,190,200,${.38*fl})`:`rgba(170,215,240,${.28*fl})`;
-  if(res){st.shakeT=now();st.shakeAmp=12*(.6+.08*M)*(opt.shake?1:0)}
+  const fl=opt.flash?1:.3;st.flashT=now();st.flashCol=res?`rgba(255,190,200,${.75*fl})`:`rgba(170,215,240,${.6*fl})`;
+  if(res){st.shakeT=now();st.shakeAmp=22*(.6+.1*M)*(opt.shake?1:0)}
   const{w}=v===null?{w:0}:payOf(v),ok=v!==null&&v===res,dlrTurn=m==='duel'&&st.who==='dlr';
   st.lastM=M;st.lastPay=0;
   if(v!==null)run.calls++;
-  if(ok){const pay=Math.round(100*w*st.gamma*M*D().k);st.lastPay=pay;run.sigma+=pay;run.streak++;run.correct++;run.maxW=Math.max(run.maxW,w);
+  if(ok){const pay=Math.round(100*w*st.gamma*M);st.lastPay=pay;run.sigma+=pay;run.streak++;run.correct++;run.maxW=Math.max(run.maxW,w);
     if(st.gamma>1)run.onBeat++;run.bestM=Math.max(run.bestM,Math.min(8,1+run.streak))}
   else if(!(dlrTurn&&v===null))run.streak=0;
   if(v===null&&!dlrTurn)run.late++;
@@ -257,7 +267,7 @@ function quip(){const m=run.mode,c=run.correct,n=G.mag.length;
   if(m==='survival'){const k=run.k;return k>=10?'THE DEALER RAN OUT OF SHELLS.':k>=7?'THE DEALER IS SWEATING.':k>=4?'THE DEALER RELOADS.':'THE DEALER WINS.'}
   if(m==='duel')return run.won?'YOU BEAT THE DEALER. HE WANTS A REMATCH.':'THE DEALER WILL SEE YOU AGAIN.';
   return c===n?'YOU BEAT THE DEALER.':c>=.75*n?'THE DEALER IS SWEATING.':c>=.5*n?'COIN FLIP ENERGY.':'THE DEALER WINS.'}
-function detail(){return detail0()+(run.diff!=='normal'?' '+DIFFS[run.diff].name[0]:'')}
+function detail(){return detail0()}
 function detail0(){const m=run.mode;
   if(m==='survival')return`MAG ${run.k}`;
   if(m==='duel')return roman(run.stage)+(run.won?' ★':'');
@@ -269,7 +279,7 @@ function endRun(){
   const last=store.get('last',{})||{};last.s=run.sigma;store.set('last',last);
   if(m==='daily'){const log=store.get('daily.log',{})||{};if(run.ranked&&log[run.date]){Object.assign(log[run.date],{done:1,s:run.sigma,mod:run.mod.name});store.set('daily.log',log)}}
   run.qual=!run.practice&&qualifies(m,run.date,run.sigma);
-  $('rMode').textContent=MODES[m].name+' · '+DIFFS[run.diff].name+(m==='daily'?` · ${run.date} · ${run.mod.name}${run.practice?' · PRACTICE':''}`:'');
+  $('rMode').textContent=MODES[m].name+(m==='daily'?` · ${run.date} · ${run.mod.name}${run.practice?' · PRACTICE':''}`:'');
   $('rScore').textContent=fmtD(run.sigma);
   const gr=grade(),gc={S:'#ffd84a',A:'#e8195a',B:'#7ef2ff',C:'#f4f4f2',D:'#6f8578'}[gr];
   const ge=$('rGrade');ge.textContent=gr;ge.style.color=gc;ge.style.animation='none';void ge.offsetWidth;ge.style.animation='';
@@ -317,41 +327,45 @@ function hud(){
   if(!run)return;
   const m=run.mode,t=now(),M=Math.min(8,1+run.streak),sig=`\\Sigma = ${fmtT(run.sigma)}`;let A='',B='',C='';
   const YS=()=>`\\text{YOU}\\;${hearts(run.hp,run.H,CR)}`,DS=()=>`${hearts(run.hpD,run.H,VIO)}\\;\\text{DLR}`;
-  const left2=(L,B)=>`${L}\\ ${tc(CR,'\\text{LIVE}')}\\;+\\;${B}\\ ${tc(CC,'\\text{BLANK}')}`;
   if(st.mode==='intro'||st.mode==='reload'){
-    const n=G.mag.length,L=G.mag.reduce((a,b)=>a+b,0),mag=left2(L,n-L);
-    if(m==='survival'){A=`${hearts(run.hp,run.hpMax,CR)}\\qquad ${mag}`;if(run.k>1)C=tc(OKC,'+'+fmtT(run.magBonus||0))+(run.healed?'\\quad '+tc(OKC,'\\heartsuit + 1'):'')}
-    else if(m==='duel'){A=`${YS()}\\qquad ${DS()}`;B=mag;C=run.stageCard?`\\text{stage }\\mathrm{${roman(run.stage)}}`:''}
-    else A=mag;
-    if(!B)B=`f(x) < 0 \\;\\Rightarrow\\; ${tc(CR,'\\text{LIVE}')}\\qquad f(x) \\ge 0 \\;\\Rightarrow\\; ${tc(CC,'\\text{BLANK}')}`;
+    const n=G.mag.length,L=G.mag.reduce((a,b)=>a+b,0),mag=magT(L,n-L);
+    if(m==='survival'){A=`${hearts(run.hp,run.hpMax,CR)}\\quad \\text{mag}_{${run.k}} = ${mag}`;B=`\\text{key: } ${G.scaleTex},\\quad f_{\\text{out}} = f\\cdot 2^{\\,s}`;
+      C=run.k>1?`\\Sigma \\mathrel{+}= ${fmtT(run.magBonus||0)}${run.healed?'\\qquad '+tc(OKC,'\\heartsuit + 1'):''}\\qquad ${sig}`:`${sig}\\qquad \\times ${M}`}
+    else if(m==='duel'){A=`\\mathrm{${roman(run.stage)}}\\quad ${YS()}\\qquad ${DS()}`;B=`\\text{mag} = ${mag}`;
+      C=run.stageCard?`\\text{stage}\\ \\mathrm{${roman(run.stage)}}:\\quad \\heartsuit^{${run.H}}\\ \\text{vs}\\ \\heartsuit^{${run.H}}\\qquad ${sig}`
+        :`\\text{LIVE}\\mapsto\\text{shoot}(\\text{DLR}),\\;\\;\\text{BLANK}\\mapsto\\text{shoot}(\\text{YOU})`}
+    else if(m==='daily'){A=`\\text{seed} = ${run.date.replace(/-/g,'\\text{-}')}\\qquad\\text{mag} = ${mag}`;
+      B=`\\text{${run.mod.name}}:\\quad P_0(\\text{LIVE}) = \\tfrac{${L}}{${n}}`;C=`${sig}\\qquad \\times 1`}
+    else{A=`\\text{mag} = ${mag}`;B=`\\text{this game: } ${G.scaleTex},\\quad f_{\\text{out}} = f\\cdot 2^{\\,s}`;C=`${sig}\\qquad \\times 1`}
   }else if(st.mode==='play'||st.mode==='over'){
-    const step=(t-st.t0)/SD,sh=G.shells[st.i],res=G.mag[st.i],v=st.guess,dlr=st.who==='dlr';
-    // line 1: the equation. line 2: the question, then the proof. line 3: score
-    A=`f(x) = ${sh.tex}`;
-    if(!st.rev)B=run.diff==='easy'?`\\text{after } x = 4\\text{, does } f \\text{ go below } 0\\,?`
-      :`\\exists\\, x \\in [4,\\,8] :\\;\\; f(x) < 0\\;\\; ?`;
-    else{const xm_=fN(sh.xneg),fm=fN(Math.round(sh.postMin*100)/100);   // the minimum after the trigger proves it
-      B=res?`\\min_{[4,8]} f = f(${xm_}) = ${fm} < 0 \\;\\Rightarrow\\; ${tc(CR,'\\text{LIVE}')}`
-           :`\\min_{[4,8]} f = f(${xm_}) = ${fm} \\ge 0 \\;\\Rightarrow\\; ${tc(CC,'\\text{BLANK}')}`}
-    const ok=v!==null&&v===res,gain=ok?tc(OKC,'+'+fmtT(st.lastPay)):v===null?'\\varnothing':tc(BADC,'0');
-    if(m==='duel'){
-      const hp=`${dlr?YS():`\\boxed{${YS()}}`}\\qquad ${dlr?`\\boxed{${DS()}}`:DS()}`;
-      if(!st.rev)C=hp+(dlr?(run.cpuCall===null?'\\qquad \\text{DLR}\\to\\;?':`\\qquad \\text{DLR}\\to\\text{${run.cpuCall?'YOU':'DLR'}}`):`\\qquad ${sig}`);
-      else{const s=run.shot||{},tgt=s.c?(s.you?'DLR':'YOU'):(s.you?'YOU':'DLR');
-        C=hp+'\\qquad '+(s.res?tc(CR,`\\heartsuit_{\\text{${tgt}}} - 1`):s.c?'\\varnothing':'\\text{shoot again}')+(v!==null?`\\quad ${gain}`:'')}
-      if(st.mode==='over')C=run.won?`\\text{YOU WIN}`:`\\heartsuit = 0`;
+    const step=(t-st.t0)/SD,sh=G.shells[st.i],{n,L,left}=counts(),res=G.mag[st.i],v=st.guess,dlr=st.who==='dlr';
+    const form=sh.formula||'d_n = n^2 \\bmod 8 \\in \\{0, 1, 4\\}';
+    const nTex=sh.notesTex||'\\text{note} = \\text{scale}[d_n] : F, G\\flat, C, G\\flat';
+    if(m==='duel')A=`${dlr?YS():`\\boxed{${YS()}}`}\\quad ${dlr?`\\boxed{${DS()}}`:DS()}\\qquad ${form}`;
+    else if(m==='survival')A=`${hearts(run.hp,run.hpMax,CR)}\\qquad ${form}`;
+    else A=form;
+    B=nTex;
+    let gain='';
+    if(st.rev&&v!==null)gain=v===res?`\\qquad ${tc(OKC,'+'+fmtT(st.lastPay))}`:`\\qquad ${tc(BADC,'+0')}`;
+    if(!st.rev){
+      C='f_{\\text{out}} = f\\cdot 2^s, \\quad s = ?';
     }else{
-      C=(m==='survival'?`${hearts(run.hp,run.hpMax,CR)}\\quad `:'')+sig+(!st.rev?(M>1?`\\quad \\times ${M}`:''):`\\qquad ${gain}`+(ok?`\\quad \\times ${Math.min(8,1+run.streak)}`:''));
-      if(m==='survival'&&st.rev&&!ok)C+=`\\quad ${tc(CR,'\\heartsuit - 1')}`;
-      if(st.rev&&run.perfect&&st.i===G.mag.length-1&&step>=40)C=`\\text{PERFECT}\\;\\; ${tc(OKC,'+'+fmtT(run.perfect))}`;
-      if(st.mode==='over')C=`\\heartsuit = 0`;
+      C=res?`f_{\\text{out}} = f\\cdot 2^s, \\quad s = -2 \\quad (${tc(CR,'\\text{LIVE}')})${gain}`
+           :`f_{\\text{out}} = f\\cdot 2^s, \\quad s = +1 \\quad (${tc(CC,'\\text{BLANK}')})${gain}`;
     }
+    if(m==='survival'&&st.rev&&!(v!==null&&v===res))C+=`\\quad ${tc(CR,'\\heartsuit - 1')}`;
+    if(st.mode==='over'){
+      if(m==='duel')C=run.won?`\\heartsuit_{\\text{DLR}} = 0\\;\\Rightarrow\\;\\text{YOU WIN}`:`\\heartsuit_{\\text{YOU}} = 0\\;\\Rightarrow\\;\\lim_{t\\to\\infty} y(t) = 0`;
+      else if(m==='survival')C=`\\heartsuit = 0\\;\\Rightarrow\\;\\lim_{t\\to\\infty} y(t) = 0`;
+    }
+    // button small lines: payout multipliers (no words)
     if(st.mode==='play'){
-      let sl='f < 0',sb='f ≥ 0';
-      if(m==='duel'&&!dlr){sl='→DLR · '+sl;sb='→YOU · '+sb}
-      $('bL').classList.remove('fav');$('bB').classList.remove('fav');
-      if(st.rev){if(v===null){sl=sb=dlr?'':'∅'}
-        else if(v===1)sl=ok?'✓ +'+fmtD(st.lastPay):'✗';else sb=ok?'✓ +'+fmtD(st.lastPay):'✗'}
+      const wl=L?left/L:0,wb=left-L?left/(left-L):0,fx=w=>w?'×'+fmtW(w):'×—';
+      let sl=fx(wl),sb=fx(wb);
+      if(m==='duel'&&!dlr){sl='→DLR '+sl;sb='→YOU '+sb}
+      if(st.rev){const okL=v===1&&res===1,okB=v===0&&res===0;
+        if(v===null){sl=sb=dlr?'':'∅'}
+        else if(v===1)sl=okL?'✓ +'+fmtD(st.lastPay):'✗';else sb=okB?'✓ +'+fmtD(st.lastPay):'✗'}
       else if(st.locked&&v===null)sl=sb='—';
       setSmall('sL',sl);setSmall('sB',sb)}
   }
@@ -365,4 +379,3 @@ function resumeGame(){if(!st.paused)return;st.paused=false;$('scrPause').classLi
 function restartGame(){st.paused=false;$('scrPause').classList.add('hide');if(run)killRoute(run.route);if(ctx)ctx.resume();startRun(run.mode)}
 function quitGame(){st.paused=false;$('scrPause').classList.add('hide');if(run)killRoute(run.route);if(ctx)ctx.resume();
   st.tintTarget=[30,55,40,.45];goMenu();if(document.activeElement)document.activeElement.blur()}
-

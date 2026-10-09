@@ -1,4 +1,4 @@
-// Beat The Dealer: Web Audio engine: master chain, routes, synth voices
+// Beat The Dealer: Web Audio master chain, routing, synthesizer voices
 "use strict";
 // ---------- audio ----------
 let ctx,bus,rev,revSend,dly,dlySend,noiseBuf,curveHard,curveSoft,MASTER,UI,ROUTE,menuLP;
@@ -131,16 +131,15 @@ const V={
   rim(t){const gg=ctx.createGain();out(gg,.15);
     const n=noise(t,.03),bp=filt('bandpass',1800,4),ng=ctx.createGain();n.connect(bp);bp.connect(ng);env(ng,t,.001,.35,.03);ng.connect(gg);
     const o=osc('sine',820,t,.025),og=ctx.createGain();o.connect(og);env(og,t,.001,.2,.025);og.connect(gg)},
-  // brass shell clink on every reveal
   // shell placed in the row: G#6 ping (minor third of F), ~100 ms ring, measured on the reel
   place(t){const f=fq(39),gg=ctx.createGain();out(gg,.25,.08);
     const o=osc('sine',f,t,.2),og=ctx.createGain();o.connect(og);env(og,t,.001,.16,.13);og.connect(gg);
     const o2=osc('triangle',f*2,t,.08),o2g=ctx.createGain();o2.connect(o2g);env(o2g,t,.001,.035,.05);o2g.connect(gg);
     const n=noise(t,.02),hp=filt('highpass',6000),ng=ctx.createGain();n.connect(hp);hp.connect(ng);env(ng,t,.0005,.07,.012);ng.connect(gg)},
+  // brass shell clink on every reveal
   clink(t){const gg=ctx.createGain();out(gg,.3);
     for(const [f,a] of[[3150,.05],[4730,.03]]){const o=osc('sine',f,t,.2),og=ctx.createGain();o.connect(og);env(og,t,.001,a,.18);og.connect(gg)}},
   // flatline
   flat(t,d){const o=osc('sine',880,t,d),lp=filt('lowpass',2000),gg=ctx.createGain();o.connect(lp);lp.connect(gg);
     gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(.1,t+.02);gg.gain.setValueAtTime(.1,t+Math.max(.02,d-.05));gg.gain.linearRampToValueAtTime(0,t+d);out(gg,.1)},
 };
-

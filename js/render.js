@@ -1,4 +1,4 @@
-// Beat The Dealer: canvas drawing: shells, scope, traces, intro animation
+// Beat The Dealer: Canvas drawing, shells, oscilloscope scope, traces, intro animations
 "use strict";
 // ---------- drawing ----------
 function rr(x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
@@ -21,24 +21,22 @@ function drawShell(cx,top,w,h,kind,glow=0,alpha=1){
 const lerp=(a,b,t)=>a+(b-a)*t;
 function background(t){
   const tt=st.tint,tg=st.tintTarget;for(let k=0;k<4;k++)tt[k]=lerp(tt[k],tg[k],.06);
-  g.fillStyle='#050806';g.fillRect(0,0,SW,1280);
-  const rg=g.createRadialGradient(CX,640,40,CX,640,Math.max(820,SW*.6));
+  g.fillStyle='#050806';g.fillRect(0,0,720,1280);
+  const rg=g.createRadialGradient(360,640,40,360,640,820);
   rg.addColorStop(0,`rgba(${tt[0]|0},${tt[1]|0},${tt[2]|0},${tt[3]})`);rg.addColorStop(1,'rgba(0,0,0,0)');
-  g.fillStyle=rg;g.fillRect(0,0,SW,1280);
+  g.fillStyle=rg;g.fillRect(0,0,720,1280);
   g.strokeStyle='rgba(120,160,130,.05)';g.lineWidth=1.2;
   for(let k=0;k<3;k++){g.beginPath();g.ellipse(GXT,668,150,60,k*Math.PI/3+t*.05,0,Math.PI*2);g.stroke()}
   g.strokeStyle='rgba(90,150,110,.13)';g.lineWidth=1;
   for(let x=GX0;x<=GX1+1;x+=35){g.beginPath();g.moveTo(x,GY0);g.lineTo(x,GY1);g.stroke()}
   g.font='600 15px "Barlow Semi Condensed"';g.textAlign='left';g.textBaseline='middle';
-  for(const v of[8,4,0,-4]){const y=AXIS-v*UNIT;g.fillStyle=v?'rgba(110,170,130,.45)':'rgba(200,200,230,.8)';g.fillText(String(v),GX0-40,y);
+  for(let o=1;o<=5;o++){const y=781-71*(o-1);g.fillStyle='rgba(110,170,130,.45)';g.fillText('F'+o,30,y);
     g.strokeStyle='rgba(90,150,110,.07)';g.beginPath();g.moveTo(GX0,y);g.lineTo(GX1,y);g.stroke()}
 }
 function axes(showTrig,trigDash){
   g.strokeStyle='rgba(150,140,200,.7)';g.fillStyle='rgba(150,140,200,.8)';g.lineWidth=2;
-  g.beginPath();g.moveTo(GX0-7,668);g.lineTo(GX1+10,668);g.stroke();
-  g.beginPath();g.moveTo(GX1+17,668);g.lineTo(GX1+5,662);g.lineTo(GX1+5,674);g.fill();
-  g.font='600 14px "Barlow Semi Condensed"';g.textAlign='center';g.fillStyle='rgba(180,180,220,.7)';
-  if(showTrig)for(const xv of[0,2,4,6,8]){const xx=X(xv*8);g.fillRect(xx-1,664,2,8);g.fillText('x='+xv,xx,690)}
+  g.beginPath();g.moveTo(68,668);g.lineTo(645,668);g.stroke();
+  g.beginPath();g.moveTo(652,668);g.lineTo(640,662);g.lineTo(640,674);g.fill();
   if(!showTrig)return;
   g.beginPath();g.moveTo(GXT,GY1);g.lineTo(GXT,GY0+4);g.stroke();
   g.beginPath();g.moveTo(GXT,GY0-4);g.lineTo(GXT-6,GY0+8);g.lineTo(GXT+6,GY0+8);g.fill();
@@ -58,7 +56,7 @@ function drawLayer(l,cur,colOverride,labels){
     const passes=l.mode==='reese'?2:1;
     for(let ps=0;ps<passes;ps++){g.beginPath();let prevY=null,prevE=null;
       for(const n of vis){const e=Math.min(n.s+n.d,cur),x1=X(n.s),x2=X(e);
-        let y=n.y!=null?n.y:Y(n.p);if(ps)y+=2+(1+5*(n.s%32)/32)*(l.wide?2.4:1.1)*((n.s%4)/4+.6);
+        let y=Y(n.p);if(ps)y+=2+(1+5*(n.s%32)/32)*(l.wide?2.4:1.1)*((n.s%4)/4+.6);
         if(prevY===null||prevE<n.s-.01)g.moveTo(x1,y);else{g.lineTo(x1,prevY+(l.mode==='step'?4:0));g.lineTo(x1,y)}
         g.lineTo(x2,y);prevY=y;prevE=n.s+n.d;head=[x2,y]}
       glowStroke(col,ps?1.6:3,ps?.75:1)}
@@ -80,8 +78,10 @@ function drawLayer(l,cur,colOverride,labels){
   }else if(l.mode==='flat'){
     const n=l.notes[0],e=Math.min(n.s+n.d,cur),y=Y(n.p);g.beginPath();g.moveTo(X(n.s),y);g.lineTo(X(e),y);glowStroke(col,2.4);return null;
   }
-  if(labels){g.font='600 13px "Barlow Semi Condensed"';g.textAlign='center';g.fillStyle=col;
-    vis.forEach((n,j)=>{if(n.lab==null)return;g.fillText(String(n.lab),X(n.s)+4,548-(j%2)*13)})}
+  if(labels){g.font='700 16px "Barlow Semi Condensed"';g.textAlign='center';g.fillStyle=col;
+    vis.forEach(n=>{if(n.lab==null||cur<n.s+0.4)return;
+      const x=(X(n.s)+X(Math.min(n.s+n.d,cur)))/2;
+      g.fillText(String(n.lab),x,Y(n.p)-14)})}
   return head?{x:head[0],y:head[1],col}:null;
 }
 function ticks(Ls,cur){
@@ -179,7 +179,6 @@ function introText(T,plan){
   if(plan.flash&&T>plan.flash&&!st.introFlash){st.introFlash=1;st.flashT=now();st.flashCol='rgba(255,60,90,.55)';st.shakeT=now();st.tintTarget=[160,10,40,.7]}
 }
 
-
 // title: a riff-shaped trace scrolls across the full width, red 808 spikes and cyan bells echo it, the magazine fans out below
 function titleScene(t){
   const bp=theme?((t-(theme.next-2))%.5+.5)%.5:(performance.now()/1000)%.5,pulse=Math.exp(-bp*9);   // beat phase (title theme when it plays)
@@ -199,3 +198,86 @@ function titleScene(t){
   dot(CX,wave(CX,0),'#ffd84a',7+3*pulse);
   g.restore();
 }
+
+// ---------- main loop ----------
+function drawFuse(step){
+  const k=Math.min(1,step/PRE);g.fillStyle='rgba(255,255,255,.12)';rr(253,462,214,6,3);g.fill();
+  const gr=g.createLinearGradient(253,0,467,0);gr.addColorStop(0,'#e8743a');gr.addColorStop(1,'#ff5d8a');g.fillStyle=gr;rr(253,462,214*k,6,3);g.fill();
+  g.fillStyle='rgba(255,255,255,.35)';for(let b=1;b<8;b++)g.fillRect(253+214*b/8-1,460,2,10);
+  if(run.lam<PRE){g.fillStyle='#ffb347';g.fillRect(253+214*run.lam/PRE-2,455,4,20)}
+  if(run.cpuCall!==null&&run.cpuAt!=null){g.fillStyle=COL.v;g.fillRect(253+214*Math.min(1,run.cpuAt/PRE)-2,457,4,16)}
+  g.fillStyle='#fff';g.beginPath();g.arc(253+214*k,465,7,0,7);g.fill()}
+function drawLock(step){if(!run||run.lam>=PRE||st.rev)return;const x=X(run.lam);
+  g.save();if(step<run.lam)g.setLineDash([6,6]);g.strokeStyle='rgba(255,179,71,.85)';g.lineWidth=2;g.beginPath();g.moveTo(x,GY0+10);g.lineTo(x,GY1);g.stroke();g.restore();
+  g.font='700 13px "Barlow Semi Condensed"';g.textAlign='center';g.fillStyle='#ffb347';g.fillText('LOCK',x,GY0+22)}
+function frame(){
+  const animT=performance.now()/1000,t=now();
+  themeTick();
+  if(run&&!st.paused){
+    if(st.mode==='intro'&&t-st.introT0>=INTRO)startShell(0,st.introT0+INTRO,'you');
+    else if(st.mode==='reload'&&t>=run.segT0+4)startShell(0,run.segT0+4,run.nextWho);
+    else if(st.mode==='over'&&t>=run.segT0+2.2)endRun();
+  }
+  let step=0;
+  if(st.mode==='play'&&!st.paused){step=(t-st.t0)/SD;
+    if(st.who==='dlr'&&run.cpuCall===null&&step>=run.cpuStep)cpuDecide();
+    if(!st.rev&&st.guess===null&&!st.locked&&step>=run.lam){st.locked=1;lockButtons()}
+    if(!st.rev&&step>=PRE)reveal();
+    if(step>=PRE+POST){afterShell(st.t0+(PRE+POST)*SD);if(st.mode==='play')step=(t-st.t0)/SD}}
+  else if(st.mode==='play')step=(t-st.t0)/SD;
+  if(inRun())hud();
+  if(st.mode==='play'){if(!st.rev){const k=Math.max(0,(step-12)/20);st.tintTarget=[lerp(30,95,k),lerp(60,45,k),lerp(40,15,k),.5+.12*k]}
+    else st.tintTarget=G.mag[st.i]?[150,12,40,.75]:[30,80,125,.65]}
+  else if(st.mode==='over')st.tintTarget=run.won?[120,95,20,.6]:[60,10,20,.6];
+  else if(st.mode==='reload')st.tintTarget=[30,60,40,.5];
+  else if(!inRun())st.tintTarget=[30,55,40,.45];
+  background(animT);
+  if(st.mode==='intro'||st.mode==='reload'){axes(false,0);
+    introDraw(t,st.mode==='intro'?st.introT0:run.segT0,G.mag.length,G.mag.reduce((a,b)=>a+b,0),st.mode==='intro'?INTRO_PLAN:RELOAD_PLAN)}
+  else if(st.mode==='play'||st.mode==='over'){
+    const cur=st.mode==='over'?PRE+POST:Math.min(step,PRE+POST);
+    axes(true,st.rev?0:Math.max(0,Math.min(.8,(step-14)/6)));
+    if(st.mode==='play')drawLock(step);
+    topRow(t);
+    const res=G.mag[st.i],oc=st.rev?(res?'r':'c'):null;let head=null;
+    // on the reveal a band sweeps left to right and recolours the riff (yellow -> red / cyan) as it passes
+    const tT=st.t0+PRE*SD,bk=st.rev?(t-tT)/.42:1;
+    if(st.rev&&bk<1&&st.mode==='play'){const bx=lerp(GX0-30,GXT+20,Math.max(0,bk));
+      g.save();g.beginPath();g.rect(bx,0,720,1280);g.clip();for(const l of st.pre)drawLayer(l,Math.min(cur,PRE),null,true);g.restore();
+      g.save();g.beginPath();g.rect(0,0,bx,1280);g.clip();for(const l of st.pre)drawLayer(l,Math.min(cur,PRE),oc,true);g.restore();
+      const bc=res?'255,40,80':'110,230,255',gr=g.createLinearGradient(bx-40,0,bx+14,0);gr.addColorStop(0,`rgba(${bc},0)`);gr.addColorStop(.75,`rgba(${bc},.45)`);gr.addColorStop(1,`rgba(${bc},.9)`);
+      g.fillStyle=gr;g.fillRect(bx-40,GY0-10,54,GY1-GY0+20)}
+    else for(const l of st.pre){const h=drawLayer(l,Math.min(cur,PRE),oc,true);if(!st.rev&&h)head=h}
+    if(st.rev)for(const l of st.post){const h=drawLayer(l,cur,null,false);if(h)head=h}
+    ticks(st.rev?[...st.pre,...st.post]:st.pre,cur);
+    if(head&&st.mode==='play')dot(head.x,head.y,head.col);
+    if(st.rev&&st.mode==='play'){const pk=Math.max(0,1-(t-st.t0-PRE*SD)/.5);if(pk>0)dot(GXT,res?740:600,res?COL.r:COL.c,10,pk);
+      g.font='700 15px "Barlow Semi Condensed"';g.textAlign='left';g.fillStyle=res?COL.r:COL.c;
+      g.fillText(res?'÷4  (s = −2)':'×2  (s = +1)',res?GXT-100:GXT+12,res?712:620)}
+    if(st.mode==='play'&&!st.rev)drawFuse(step);
+    if(st.mode==='over'){const k=Math.min(1,(t-run.segT0)/2),c=run.won?'#ffd84a':'#ff3d6e';
+      g.beginPath();g.moveTo(GX0,668);g.lineTo(lerp(GX0,GX1,k),668);glowStroke(c,3)}
+  }else{ // menus: idle magazine
+    if(st.mode==='title')titleScene(animT);
+    const bob=st.mode==='title'?1:.5;
+    for(let j=0;j<8;j++)drawShell(CX-256+j*73,578+Math.sin(animT*2+j)*4*bob,42,98,j<4?'live':'blank',st.mode==='title'?.6:.25,st.mode==='title'?1:.35)}
+  if(theme&&theme.pulse&&t>=theme.pulse&&t-theme.pulse<.05&&st.mode==='title'){const l=$('logo');l.classList.remove('pulse');void l.offsetWidth;l.classList.add('pulse');theme.pulse=0}
+  if(st.mode==='title')$('press').style.visibility=(performance.now()/1000%1)<.6?'visible':'hidden';
+  const fl=opt.flash?1:.3,fa=Math.max(0,1-(t-st.flashT)/.45),fe=$('flash');fe.style.background=st.flashCol;fe.style.opacity=fa*(st.flashCol.includes('255,60,90')?fl:1);
+  const sk=st.paused||!opt.shake?0:Math.max(0,1-(t-st.shakeT)/.5),s=stage.dataset.s,A=st.shakeAmp||22;
+  const ab=st.paused?0:Math.max(0,1-(t-st.shakeT)/.4),zoom=1+.035*ab*ab;   // chromatic split + punch-in on every LIVE hit
+  stage.style.transform=`translate(-50%, -50%) scale(${s*zoom}) translate(${(Math.random()-.5)*A*sk}px,${(Math.random()-.5)*A*sk}px)`;
+  if(ab>0){const d=(3+11*ab).toFixed(1);$('rgbR').setAttribute('dx',d);$('rgbC').setAttribute('dx',-d);$('rgbR').setAttribute('dy',(ab*2).toFixed(1))}
+  const fil=(ab>0?'url(#rgbx) ':'')+(sk>0?`saturate(${1+sk}) contrast(${1+.2*sk})`:'');if(stage.style.filter!==fil)stage.style.filter=fil;
+  // edges glow with the drop: red pulses on every kick after a LIVE, cold blue after a BLANK
+  let vg='radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,.75) 100%)';
+  if(st.mode==='play'&&st.rev){const ph=(((t-st.t0)/SD)%4+4)%4*SD,pu=Math.exp(-ph*7),live=G.mag[st.i];
+    vg=live?`radial-gradient(ellipse at center,transparent ${38-6*pu}%,rgba(${150+60*pu|0},0,30,${(.55+.3*pu).toFixed(2)}) 100%)`
+           :`radial-gradient(ellipse at center,transparent 42%,rgba(10,55,110,${(.5+.12*pu).toFixed(2)}) 100%)`}
+  else if(st.mode==='over'&&!run.won)vg='radial-gradient(ellipse at center,transparent 35%,rgba(120,0,20,.8) 100%)';
+  const ve=$('vig');if(ve._v!==vg){ve._v=vg;ve.style.background=vg}
+  if(st.mode==='init'&&performance.now()>ini.deadline)initConfirm();
+  grain();requestAnimationFrame(frame);
+}
+const gc=$('grain').getContext('2d'),gimg=gc.createImageData(180,320);let gf=0;
+function grain(){if(gf++%2)return;const d=gimg.data;for(let i=0;i<d.length;i+=4){const v=Math.random()*255|0;d[i]=d[i+1]=d[i+2]=v;d[i+3]=255}gc.putImageData(gimg,0,0)}
