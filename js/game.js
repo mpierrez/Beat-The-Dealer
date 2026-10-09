@@ -142,7 +142,7 @@ function startRun(mode){
   const tb=now()+.15;themeStop(tb);
   if(run)killRoute(run.route);
   const date=today();
-  run={mode,route:mkRoute(bus),date,sigma:0,shown:0,streak:0,bestM:1,correct:0,calls:0,shells:0,onBeat:0,maxW:0,late:0,
+  run={mode,route:mkRoute(bus,IS_MOBILE?.7:.85),date,sigma:0,shown:0,streak:0,bestM:1,correct:0,calls:0,shells:0,onBeat:0,maxW:0,late:0,
     hp:3,hpMax:5,k:1,magOk:true,stage:1,H:2,hpD:2,nextWho:'you',hits:0,extra:0,stageHurt:false,won:false,perfect:0,lam:32,
     ranked:false,practice:false,mod:null,qual:false,cpuStep:null,cpuCall:null,segT0:0,stageCard:false};
   const last=store.get('last',{})||{};last.mode=mode;store.set('last',last);

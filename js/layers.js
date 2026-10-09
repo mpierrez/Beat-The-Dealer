@@ -40,14 +40,14 @@ function schedule(Ls,t0){
 }
 function drums(t0,phase,res){
   if(phase==='pre'){
-    for(let s=0;s<PRE;s+=4)V.kick(t0+s*SD,s===0||s===16?1:.85);
-    for(let s=24;s<PRE;s++)V.hat(t0+s*SD,.5+(s-24)*.12);
+    for(let s=0;s<PRE;s+=4)V.kick(t0+s*SD,s===0||s===16?.9:.75);
+    for(let s=24;s<PRE;s++)V.hat(t0+s*SD,.35+(s-24)*.06);
     V.riser(t0+20*SD,12*SD);
   }else if(res){
     for(let s=PRE;s<PRE+POST;s++){const t=t0+s*SD;
-      if(s%4===0)V.kick(t,1);if(s%8===4)V.clap(t);V.hat(t,s%2?1.6:.9)}
+      if(s%4===0)V.kick(t,.85);if(s%8===4)V.clap(t,.7);V.hat(t,s%2?.75:.45)}
   }else{
-    for(let s=PRE;s<PRE+POST;s+=8)V.kick(t0+s*SD,.75);
+    for(let s=PRE;s<PRE+POST;s+=8)V.kick(t0+s*SD,.65);
     for(let s=PRE;s<PRE+POST;s+=2)if(s%8===6)V.hat(t0+s*SD,.35);
   }
 }

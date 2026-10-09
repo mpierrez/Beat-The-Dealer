@@ -267,8 +267,9 @@ function frame(){
   const sk=st.paused||!opt.shake?0:Math.max(0,1-(t-st.shakeT)/.5),s=stage.dataset.s,A=st.shakeAmp||22;
   const ab=st.paused?0:Math.max(0,1-(t-st.shakeT)/.4),zoom=1+.035*ab*ab;   // chromatic split + punch-in on every LIVE hit
   stage.style.transform=`translate(-50%, -50%) scale(${s*zoom}) translate(${(Math.random()-.5)*A*sk}px,${(Math.random()-.5)*A*sk}px)`;
-  if(ab>0){const d=(3+11*ab).toFixed(1);$('rgbR').setAttribute('dx',d);$('rgbC').setAttribute('dx',-d);$('rgbR').setAttribute('dy',(ab*2).toFixed(1))}
-  const fil=(ab>0?'url(#rgbx) ':'')+(sk>0?`saturate(${1+sk}) contrast(${1+.2*sk})`:'');if(stage.style.filter!==fil)stage.style.filter=fil;
+  if(!IS_MOBILE&&ab>0){const d=(3+11*ab).toFixed(1);$('rgbR').setAttribute('dx',d);$('rgbC').setAttribute('dx',-d);$('rgbR').setAttribute('dy',(ab*2).toFixed(1))}
+  const fil=IS_MOBILE?'':((ab>0?'url(#rgbx) ':'')+(sk>0?`saturate(${1+sk}) contrast(${1+.2*sk})`:''));
+  if(stage.style.filter!==fil)stage.style.filter=fil;
   // edges glow with the drop: red pulses on every kick after a LIVE, cold blue after a BLANK
   let vg='radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,.75) 100%)';
   if(st.mode==='play'&&st.rev){const ph=(((t-st.t0)/SD)%4+4)%4*SD,pu=Math.exp(-ph*7),live=G.mag[st.i];
@@ -280,4 +281,4 @@ function frame(){
   grain();requestAnimationFrame(frame);
 }
 const gc=$('grain').getContext('2d'),gimg=gc.createImageData(180,320);let gf=0;
-function grain(){if(gf++%2)return;const d=gimg.data;for(let i=0;i<d.length;i+=4){const v=Math.random()*255|0;d[i]=d[i+1]=d[i+2]=v;d[i+3]=255}gc.putImageData(gimg,0,0)}
+function grain(){if(IS_MOBILE||(gf++%2))return;const d=gimg.data;for(let i=0;i<d.length;i+=4){const v=Math.random()*255|0;d[i]=d[i+1]=d[i+2]=v;d[i+3]=255}gc.putImageData(gimg,0,0)}

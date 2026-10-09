@@ -6,13 +6,19 @@ function mkCurve(k){const c=new Float32Array(2048);for(let i=0;i<2048;i++){const
 function initAudio(){
   if(ctx)return;
   ctx=new (window.AudioContext||window.webkitAudioContext)();
-  curveHard=mkCurve(6);curveSoft=mkCurve(IS_MOBILE?1.1:1.4);
-  const comp=ctx.createDynamicsCompressor();comp.threshold.value=IS_MOBILE?-16:-12;comp.knee.value=8;comp.ratio.value=IS_MOBILE?6:5;comp.attack.value=.004;comp.release.value=.18;
-  const clip=ctx.createWaveShaper();clip.curve=curveSoft;const out=ctx.createGain();out.gain.value=VOLS[opt.vol]??.9;MASTER=out;
-  bus=ctx.createGain();bus.gain.value=IS_MOBILE?.52:.8;
+  curveHard=mkCurve(IS_MOBILE?2.5:5);curveSoft=mkCurve(IS_MOBILE?1.0:1.3);
+  const comp=ctx.createDynamicsCompressor();
+  comp.threshold.value=IS_MOBILE?-18:-14;
+  comp.knee.value=12;
+  comp.ratio.value=IS_MOBILE?4:5;
+  comp.attack.value=.003;
+  comp.release.value=.14;
+  const clip=ctx.createWaveShaper();clip.curve=curveSoft;
+  const out=ctx.createGain();out.gain.value=VOLS[opt.vol]??.9;MASTER=out;
+  bus=ctx.createGain();bus.gain.value=IS_MOBILE?.38:.65;
   if(IS_MOBILE){
-    const hp=filt('highpass',85,.7);
-    bus.connect(hp);hp.connect(comp);comp.connect(clip);clip.connect(out);
+    const hp=filt('highpass',65,.7);
+    bus.connect(hp);hp.connect(comp);comp.connect(out);
   }else{
     bus.connect(clip);clip.connect(comp);comp.connect(out);
   }
@@ -58,12 +64,12 @@ const V={
   // distorted 808 bass: pitch-dropping sine into hard saturation
   k808(t,p,d,gn=1){const f=fq(p),len=Math.max(.18,d),o=ctx.createOscillator();o.type='sine';
     o.frequency.setValueAtTime(f*2.2,t);o.frequency.exponentialRampToValueAtTime(f,t+.045);o.start(t);o.stop(t+len+.1);
-    const drive=ctx.createGain();drive.gain.value=4.5;const ws=ctx.createWaveShaper();ws.curve=curveHard;ws.oversample='4x';
-    const lp=filt('lowpass',7500,.7),gg=ctx.createGain();o.connect(drive);drive.connect(ws);ws.connect(lp);lp.connect(gg);
-    const fz=filt('highpass',1800,.7),fzg=ctx.createGain();fzg.gain.value=.9;ws.connect(fz);fz.connect(fzg);fzg.connect(gg);
-    gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(.3*gn,t+.004);gg.gain.setTargetAtTime(.22*gn,t+.02,.15);
-    gg.gain.setValueAtTime(.22*gn,t+len-.03);gg.gain.linearRampToValueAtTime(0,t+len+.02);out(gg,.04);
-    const clean=osc('sine',f,t,len),cg=ctx.createGain();clean.connect(cg);cg.gain.setValueAtTime(.25*gn,t);cg.gain.setValueAtTime(.25*gn,t+len-.03);cg.gain.linearRampToValueAtTime(0,t+len+.02);out(cg)},
+    const drive=ctx.createGain();drive.gain.value=IS_MOBILE?1.8:3.0;const ws=ctx.createWaveShaper();ws.curve=curveHard;ws.oversample='none';
+    const lp=filt('lowpass',6500,.7),gg=ctx.createGain();o.connect(drive);drive.connect(ws);ws.connect(lp);lp.connect(gg);
+    const fz=filt('highpass',1400,.7),fzg=ctx.createGain();fzg.gain.value=.6;ws.connect(fz);fz.connect(fzg);fzg.connect(gg);
+    gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(.18*gn,t+.004);gg.gain.setTargetAtTime(.13*gn,t+.02,.15);
+    gg.gain.setValueAtTime(.13*gn,t+len-.03);gg.gain.linearRampToValueAtTime(0,t+len+.02);out(gg,.04);
+    const clean=osc('sine',f,t,len),cg=ctx.createGain();clean.connect(cg);cg.gain.setValueAtTime(.14*gn,t);cg.gain.setValueAtTime(.14*gn,t+len-.03);cg.gain.linearRampToValueAtTime(0,t+len+.02);out(cg)},
   // glass bell: FM with a slightly inharmonic partial, long ring, reverb + echo
   bell(t,p,d,gn=1){const f=fq(p),ring=1.6,c=osc('sine',f,t,ring),m=osc('sine',f*3.01,t,ring),mg=ctx.createGain();
     mg.gain.setValueAtTime(f*2.2,t);mg.gain.exponentialRampToValueAtTime(f*.08,t+.9);m.connect(mg);mg.connect(c.frequency);
@@ -89,29 +95,31 @@ const V={
     const r=semis(fitOct(deg,0,6));for(const iv of[-24,-12,-5,0,semis(deg+2)-semis(deg),7])for(const det of[-12,0,12]){const o=osc('sawtooth',fq(r+iv),t,d);o.detune.value=det;o.connect(lp)}},
   // thunder kick: long pitch sweep from the top down to A1, measured on the reel
   kick(t,v=1){const o=ctx.createOscillator();o.type='sine';
-    o.frequency.setValueAtTime(420,t);o.frequency.exponentialRampToValueAtTime(110,t+.04);o.frequency.exponentialRampToValueAtTime(52,t+.26);
-    const sh=ctx.createWaveShaper();sh.curve=curveSoft;const gg=ctx.createGain();o.connect(sh);sh.connect(gg);
-    gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(.95*v,t+.002);gg.gain.setTargetAtTime(.72*v,t+.05,.18);gg.gain.exponentialRampToValueAtTime(1e-4,t+.72);
+    o.frequency.setValueAtTime(400,t);o.frequency.exponentialRampToValueAtTime(105,t+.04);o.frequency.exponentialRampToValueAtTime(50,t+.26);
+    const gg=ctx.createGain();
+    if(IS_MOBILE){o.connect(gg)}else{const sh=ctx.createWaveShaper();sh.curve=curveSoft;o.connect(sh);sh.connect(gg)}
+    gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(.65*v,t+.002);gg.gain.setTargetAtTime(.45*v,t+.05,.18);gg.gain.exponentialRampToValueAtTime(1e-4,t+.72);
     out(gg,.03);o.start(t);o.stop(t+.7);
-    const n=noise(t,.02),hp=filt('highpass',3500),ng=ctx.createGain();n.connect(hp);hp.connect(ng);env(ng,t,.0005,.18*v,.012);out(ng)},
+    const n=noise(t,.02),hp=filt('highpass',3500),ng=ctx.createGain();n.connect(hp);hp.connect(ng);env(ng,t,.0005,.12*v,.012);out(ng)},
   clap(t,v=1){const bp=filt('highpass',900,.5),gg=ctx.createGain();bp.connect(gg);out(gg,.35);
     const n=noise(t,.35);n.connect(bp);const p=gg.gain;p.setValueAtTime(0,t);
-    for(const o of[0,.011,.022]){p.setValueAtTime(1*v,t+o);p.exponentialRampToValueAtTime(.12*v,t+o+.009)}
-    p.setValueAtTime(.7*v,t+.031);p.exponentialRampToValueAtTime(1e-4,t+.34)},
-  hat(t,v=1){const n=noise(t,.06),hp=filt('highpass',8000),gg=ctx.createGain();n.connect(hp);hp.connect(gg);env(gg,t,.001,.16*v,.045);out(gg,.05)},
+    for(const o of[0,.011,.022]){p.setValueAtTime(.8*v,t+o);p.exponentialRampToValueAtTime(.1*v,t+o+.009)}
+    p.setValueAtTime(.55*v,t+.031);p.exponentialRampToValueAtTime(1e-4,t+.34)},
+  hat(t,v=1){const n=noise(t,.06),hp=filt('highpass',8000),gg=ctx.createGain();n.connect(hp);hp.connect(gg);env(gg,t,.001,.12*v,.045);out(gg,.05)},
   tick(t,v=1){const o=osc('square',1520,t,.03),gg=ctx.createGain(),hp=filt('highpass',900);o.connect(hp);hp.connect(gg);env(gg,t,.001,.045*v,.025);out(gg,.2)},
   riser(t,d){const n=noise(t,d+.05),bp=filt('bandpass',400,3),gg=ctx.createGain();
     bp.frequency.setValueAtTime(400,t);bp.frequency.exponentialRampToValueAtTime(9000,t+d);
-    gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(.16,t+d);gg.gain.linearRampToValueAtTime(0,t+d+.02);n.connect(bp);bp.connect(gg);out(gg,.25)},
+    gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(.14,t+d);gg.gain.linearRampToValueAtTime(0,t+d+.02);n.connect(bp);bp.connect(gg);out(gg,.25)},
   // the shot: crack + boom + rolling thunder tail
   gunshot(t){
-    const c=noise(t,.05),chp=filt('highpass',1800),cg=ctx.createGain();c.connect(chp);chp.connect(cg);env(cg,t,.0005,.7,.03);out(cg,.5);
-    const n=noise(t,1.8),lp=filt('lowpass',9000,.5),ws=ctx.createWaveShaper();ws.curve=curveHard;const ng=ctx.createGain();
-    lp.frequency.setValueAtTime(9000,t);lp.frequency.exponentialRampToValueAtTime(160,t+1.2);n.connect(lp);lp.connect(ws);ws.connect(ng);env(ng,t,.001,.32,1.5);out(ng,.7);
-    const b=ctx.createOscillator();b.frequency.setValueAtTime(160,t);b.frequency.exponentialRampToValueAtTime(32,t+.6);
-    const bs=ctx.createWaveShaper();bs.curve=curveSoft;const bg=ctx.createGain();b.connect(bs);bs.connect(bg);env(bg,t,.002,1,1.4);out(bg,.2);b.start(t);b.stop(t+1.6);
-    const r=noise(t,2.6),rlp=filt('lowpass',140,.8),rg=ctx.createGain();r.connect(rlp);rlp.connect(rg);
-    rg.gain.setValueAtTime(0,t);rg.gain.linearRampToValueAtTime(.9,t+.15);rg.gain.exponentialRampToValueAtTime(1e-4,t+2.5);out(rg,.3)},
+    const c=noise(t,.05),chp=filt('highpass',1800),cg=ctx.createGain();c.connect(chp);chp.connect(cg);env(cg,t,.0005,.4,.03);out(cg,.5);
+    const n=noise(t,1.4),lp=filt('lowpass',7000,.5),ng=ctx.createGain();
+    lp.frequency.setValueAtTime(7000,t);lp.frequency.exponentialRampToValueAtTime(160,t+1.0);
+    n.connect(lp);lp.connect(ng);env(ng,t,.001,.22,1.2);out(ng,.5);
+    const b=ctx.createOscillator();b.frequency.setValueAtTime(140,t);b.frequency.exponentialRampToValueAtTime(32,t+.5);
+    const bg=ctx.createGain();b.connect(bg);env(bg,t,.002,.6,1.0);out(bg,.2);b.start(t);b.stop(t+1.2);
+    const r=noise(t,1.8),rlp=filt('lowpass',140,.8),rg=ctx.createGain();r.connect(rlp);rlp.connect(rg);
+    rg.gain.setValueAtTime(0,t);rg.gain.linearRampToValueAtTime(.5,t+.1);rg.gain.exponentialRampToValueAtTime(1e-4,t+1.8);out(rg,.25)},
   dryfire(t){const n=noise(t,.05),hp=filt('highpass',2500),gg=ctx.createGain();n.connect(hp);hp.connect(gg);env(gg,t,.0005,.35,.035);out(gg,.4);
     for(const [f,a] of [[2637,.07],[3951,.04],[5274,.025]]){const o=osc('sine',f,t+.004,1.5),og=ctx.createGain();o.connect(og);env(og,t+.004,.001,a,1.3);out(og,.8,.3)}},
   // the Dealer's lead (VS): square stack, no 2f partial, darker fixed low-pass
