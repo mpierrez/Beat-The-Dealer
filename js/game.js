@@ -151,8 +151,8 @@ function startRun(mode){
   const t=st.introT0,b=SD*4;
   routeTo(run.route,()=>{
     for(let k=0;k<9;k++){V.kick(t+k*b,k%4===0?1:.8);V.kick(t+k*b+b/2,.3)}
-    for(let k=0;k<5;k++)V.tick(t+.5+k*.06,.8);                                // rattle
-    for(let j=0,n=G.mag.length;j<n;j++){V.tick(t+loadAt(j),.7);V.clink(t+loadAt(j)+LOADD)}   // loaded one by one
+    for(let k=0;k<3;k++)V.tick(t+.32+k*.055,.6);                              // rattle
+    for(let j=0,n=G.mag.length;j<n;j++)V.place(t+loadAt(j)+LOADD);   // one ping per shell, on the sixteenths like the reel
     V.pad(t+2.5,0,1.95,1.2);V.riser(t+3.5,1);V.gunshot(t+4.5)});
   hud();
 }

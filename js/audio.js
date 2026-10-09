@@ -125,6 +125,11 @@ const V={
     const n=noise(t,.03),bp=filt('bandpass',1800,4),ng=ctx.createGain();n.connect(bp);bp.connect(ng);env(ng,t,.001,.35,.03);ng.connect(gg);
     const o=osc('sine',820,t,.025),og=ctx.createGain();o.connect(og);env(og,t,.001,.2,.025);og.connect(gg)},
   // brass shell clink on every reveal
+  // shell placed in the row: G#6 ping (minor third of F), ~100 ms ring, measured on the reel
+  place(t){const f=fq(39),gg=ctx.createGain();out(gg,.25,.08);
+    const o=osc('sine',f,t,.2),og=ctx.createGain();o.connect(og);env(og,t,.001,.16,.13);og.connect(gg);
+    const o2=osc('triangle',f*2,t,.08),o2g=ctx.createGain();o2.connect(o2g);env(o2g,t,.001,.035,.05);o2g.connect(gg);
+    const n=noise(t,.02),hp=filt('highpass',6000),ng=ctx.createGain();n.connect(hp);hp.connect(ng);env(ng,t,.0005,.07,.012);ng.connect(gg)},
   clink(t){const gg=ctx.createGain();out(gg,.3);
     for(const [f,a] of[[3150,.05],[4730,.03]]){const o=osc('sine',f,t,.2),og=ctx.createGain();o.connect(og);env(og,t,.001,a,.18);og.connect(gg)}},
   // flatline
