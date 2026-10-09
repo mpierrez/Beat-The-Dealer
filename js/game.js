@@ -331,8 +331,9 @@ function hud(){
     A=`f(x) = ${sh.tex}`;
     if(!st.rev)B=run.diff==='easy'?`\\text{after } x = 4\\text{, does } f \\text{ go below } 0\\,?`
       :`\\exists\\, x \\in [4,\\,8] :\\;\\; f(x) < 0\\;\\; ?`;
-    else B=res?`f(${fN(Math.round(sh.xneg*100)/100)}) = ${fN(Math.round(sh.f(sh.xneg)*100)/100)} < 0 \\;\\Rightarrow\\; ${tc(CR,'\\text{LIVE}')}`
-             :`\\min_{[4,8]} f = ${fN(Math.round(sh.postMin*100)/100)} \\ge 0 \\;\\Rightarrow\\; ${tc(CC,'\\text{BLANK}')}`;
+    else{const xm_=fN(sh.xneg),fm=fN(Math.round(sh.postMin*100)/100);   // the minimum after the trigger proves it
+      B=res?`\\min_{[4,8]} f = f(${xm_}) = ${fm} < 0 \\;\\Rightarrow\\; ${tc(CR,'\\text{LIVE}')}`
+           :`\\min_{[4,8]} f = f(${xm_}) = ${fm} \\ge 0 \\;\\Rightarrow\\; ${tc(CC,'\\text{BLANK}')}`}
     const ok=v!==null&&v===res,gain=ok?tc(OKC,'+'+fmtT(st.lastPay)):v===null?'\\varnothing':tc(BADC,'0');
     if(m==='duel'){
       const hp=`${dlr?YS():`\\boxed{${YS()}}`}\\qquad ${dlr?`\\boxed{${DS()}}`:DS()}`;

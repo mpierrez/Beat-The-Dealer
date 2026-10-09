@@ -136,47 +136,57 @@ function finishRiff(r){
 // ---------- equations: every shell is a function f(x). The graph shows it up to the trigger (x = 4).
 // LIVE  = f goes below 0 somewhere in (4, 8]  -> the riff falls under the axis into the 808
 // BLANK = f stays at or above 0 until x = 8    -> the riff stays up, glass bells
+// f = trend(x) + riff(n), n = floor(4x) = the eighth-note index: the trend decides LIVE/BLANK,
+// the riff term is a reel-style integer pattern (n^2 mod 8, (5n+3) mod 8, triangular numbers...) that makes the music
 const XT=4,XE=8,AXIS=668,UNIT=16;          // x per shell: 0..8 (s = 8x sixteenths); y pixels per unit of f
 const fN=v=>Number.isInteger(v)?String(v):String(+v.toFixed(2));
 const sg=(v,first)=>v<0?`- ${fN(-v)}`:first?fN(v):`+ ${fN(v)}`;   // signed term for TeX
 const xm=c=>c===0?'x':`(x ${sg(-c)})`;                               // (x - c)
-const EQ={
-  easy:[
-    ()=>{const a=2+rnd(9),b=pick([.5,1,1,1.5,2]);return{f:x=>a-b*x,tex:`${a} - ${b===1?'':fN(b)}x`}},
-    ()=>{const a=rnd(5),b=pick([.5,1]);return{f:x=>a+b*x,tex:`${a?a+' + ':''}${b===1?'':fN(b)}x`}},
-    ()=>{const c=2+rnd(7);return{f:x=>c-x,tex:`${c} - x`}},
-  ],
-  normal:[
-    ()=>{const a=3+rnd(10),c=1+rnd(3);return{f:x=>a-(x-c)**2,tex:`${a} - ${xm(c)}^2`}},
-    ()=>{const c=5+rnd(3),a=1+rnd(8);return{f:x=>(x-c)**2-a,tex:`${xm(c)}^2 - ${a}`}},
-    ()=>{const a=2+rnd(5),b=1+rnd(7);return{f:x=>a+b*Math.sin(x),tex:`${a} + ${b===1?'':b}\\sin x`}},
-    ()=>{const a=2+rnd(12),k=2+rnd(3);return{f:x=>a-x*x/k,tex:`${a} - \\tfrac{x^2}{${k}}`}},
-    ()=>{const a=2+rnd(9),b=pick([.5,1,1.5,2]);return{f:x=>a-b*x,tex:`${a} - ${b===1?'':fN(b)}x`}},
-  ],
-  hard:[
-    ()=>{const a=1+rnd(5),b=1+rnd(5),c=2+rnd(5);return{f:x=>c+a*Math.cos(x)-b*Math.sin(x/2),tex:`${c} + ${a===1?'':a}\\cos x - ${b===1?'':b}\\sin\\tfrac{x}{2}`}},
-    ()=>{const r1=4+rnd(4)+.5,r2=r1+1+rnd(4),k=pick([1,2,3]);return{f:x=>(x-r1)*(x-r2)/k,tex:`\\tfrac{${xm(r1)}${xm(r2)}}{${k}}`}},
-    ()=>{const a=2+rnd(8),b=pick([1,1.5,2]),c=1+rnd(4);return{f:x=>a-b*Math.abs(x-c),tex:`${a} - ${b===1?'':fN(b)}\\lvert x ${sg(-c)}\\rvert`}},
-    ()=>{const c=2+rnd(6),a=1+rnd(6);return{f:x=>c+a*Math.sin(Math.PI*x/4),tex:`${c} + ${a===1?'':a}\\sin\\tfrac{\\pi x}{4}`}},
-    ()=>{const a=4+rnd(10),k=pick([4,6,8]),b=pick([1,2]);return{f:x=>a-x*x*x/(k*k)+b*Math.sin(2*x),tex:`${a} - \\tfrac{x^3}{${k*k}} + ${b===1?'':b}\\sin 2x`}},
-  ],
+const kf=k=>k===1?'':k===.5?'\\tfrac{1}{2}':k===.25?'\\tfrac{1}{4}':fN(k);
+// riff terms: values per eighth n, small integer ranges -> scale degrees
+const RIFF={
+  sq:  {v:n=>n*n%8,         tex:'(n^2 \\bmod 8)',              amp:[.5]},        // 0 1 4 1 0 1 4 1 (the reel's shell #1)
+  lcg: {v:n=>(5*n+3)%8,     tex:'\\big((5n+3) \\bmod 8\\big)',  amp:[.5,.25]},    // 3 2 5 0 ... every value once
+  tri: {v:n=>n*(n+1)/2%7,   tex:'\\big(\\tfrac{n(n+1)}{2} \\bmod 7\\big)', amp:[.5]},  // palindrome 0 1 3 6 3 1 0
+  arp: {v:n=>[0,2,4,7][n%4],tex:'a_{\\,n \\bmod 4},\\; a=(0,2,4,7)', amp:[.5,1]},  // arpeggio up
+  pol: {v:n=>n%3===0?3:0,   tex:'3\\cdot[\\,3 \\mid n\\,]',     amp:[1]},         // 3 against 4
+  zig: {v:n=>Math.abs(n%8-4),tex:'\\lvert (n \\bmod 8) - 4\\rvert', amp:[.5,1]}, // zigzag
+  alt: {v:n=>n%2*2,         tex:'2\\,(n \\bmod 2)',             amp:[1]},         // trill
 };
-// draw a function that gives the wanted answer (rejection sampling; the pre-trigger part always stays above 0)
-function genEq(live,dk){
-  const fams=EQ[dk]||EQ.normal;
-  for(let tries=0;tries<600;tries++){
-    const e=pick(fams)();let ok=true,preMax=-1e9,postMin=1e9,postMax=-1e9,xneg=null;
-    for(let x=0;x<=XE+1e-9;x+=.05){const v=e.f(x);
-      if(x<=XT){if(v<.4||v>10.5){ok=false;break}preMax=Math.max(preMax,v)}
-      else{if(v>10.5||v<-7.5){ok=false;break}postMin=Math.min(postMin,v);postMax=Math.max(postMax,v);if(xneg===null&&v<0)xneg=x}}
-    if(!ok)continue;
-    if(live?postMin<=-.6:postMin>=.4)return{...e,postMin,xneg};
-  }
-  return live?{f:x=>6-x,tex:'6 - x',postMin:-2,xneg:6}:{f:x=>2+x/2,tex:'2 + 0.5x',postMin:4,xneg:null};
+const TREND={
+  lin: ()=>{const a=3+rnd(10),b=pick([.5,1,1,1.5,2]);return{f:x=>a-b*x,tex:`${a} - ${b===1?'':fN(b)}x`}},
+  up:  ()=>{const a=1+rnd(4),b=pick([.25,.5]);return{f:x=>a+b*x,tex:`${a} + ${kf(b)}x`}},
+  par: ()=>{const a=3+rnd(12),k=2+rnd(4);return{f:x=>a-x*x/k,tex:`${a} - \\tfrac{x^2}{${k}}`}},
+  bowl:()=>{const c=5+rnd(3),a=1+rnd(6),k=pick([1,2]);return{f:x=>(x-c)**2/k-a,tex:k===1?`${xm(c)}^2 - ${a}`:`\\tfrac{${xm(c)}^2}{${k}} - ${a}`}},
+  sin: ()=>{const a=2+rnd(5),b=1+rnd(5);return{f:x=>a+b*Math.sin(x),tex:`${a} + ${b===1?'':b}\\sin x`}},
+};
+const LEVEL={
+  easy:  {trends:['lin','lin','up'],riffs:['alt','pol','sq']},
+  normal:{trends:['lin','par','bowl','sin','up'],riffs:['sq','lcg','tri','arp','pol','zig']},
+  hard:  {trends:['par','bowl','sin','lin'],riffs:['lcg','tri','arp','zig','sq'],two:1},
+};
+function makeEq(dk){
+  const L=LEVEL[dk]||LEVEL.normal,T=TREND[pick(L.trends)](),k1=pick(Object.keys(RIFF).filter(k=>L.riffs.includes(k)));
+  const r1=RIFF[k1],a1=pick(r1.amp);let rf=n=>a1*r1.v(n),rt=`${kf(a1)}${r1.tex}`;
+  if(L.two&&R()<.5){const k2=pick(L.riffs.filter(k=>k!==k1)),r2=RIFF[k2],a2=.25;const p=rf;rf=n=>p(n)-a2*r2.v(n);rt+=` - \\tfrac{1}{4}${r2.tex}`}
+  const f=x=>T.f(x)+rf(Math.floor(4*x+1e-9));
+  return{f,tex:`${T.tex} + ${rt},\\quad n=\\lfloor 4x\\rfloor`,riff:k1};
 }
-// notes: one per eighth, pitch = f(x) rounded onto the scale, y = the real value of f
-function eqNotes(f,s0,s1){const o=[];for(let s=s0;s<s1;s+=2){const x=s/8,v=f(x),deg=Math.round(Math.max(-7,Math.min(10,v)));
-  o.push({s,d:2,p:semis(deg),y:Math.max(GY0,Math.min(GY1,AXIS-v*UNIT)),v})}return o}
+// draw a function that gives the wanted answer (rejection sampling with a clear margin; the pre-trigger part stays above 0)
+function genEq(live,dk){
+  for(let tries=0;tries<800;tries++){
+    const e=makeEq(dk);let ok=true,postMin=1e9,xneg=null;
+    for(let s=0;s<64;s++){const x=s/8+1e-6,v=e.f(x);
+      if(s<32){if(v<.4||v>10.5){ok=false;break}}
+      else{if(v>10.5||v<-7.5){ok=false;break}if(v<postMin){postMin=v;xneg=s/8}}}
+    if(!ok)continue;
+    if(live?postMin<=-.8:postMin>=.6)return{...e,postMin,xneg};
+  }
+  return live?{f:x=>6-x,tex:'6 - x',postMin:-1.875,xneg:7.875}:{f:x=>2+x/2,tex:'2 + \\tfrac{1}{2}x',postMin:4,xneg:4};
+}
+// notes: one per eighth (n = floor(4x)), pitch = f rounded onto the scale; y = the real value of f
+function eqNotes(f,s0,s1,riff){const stac=riff==='pol'||riff==='alt',o=[];for(let s=s0;s<s1;s+=2){const x=s/8+1e-6,v=f(x),deg=Math.round(Math.max(-8,Math.min(12,1.3*v)));
+  o.push({s,d:stac?1.4:2,p:semis(deg),y:Math.max(GY0,Math.min(GY1,AXIS-v*UNIT)),v})}return o}
 // a magazine of n shells (L live): one function per shell, chosen to match its LIVE/BLANK
 function newGame(n=8,L=4,opts={}){
   const sc=opts.sc||pick(SCALES),key=opts.key||0;
@@ -184,6 +194,6 @@ function newGame(n=8,L=4,opts={}){
   G.mag=shuffle(Array.from({length:n},(_,j)=>j<L?1:0));
   const dk=opts.diff||(typeof run!=='undefined'&&run&&run.mode==='daily'?'normal':(run&&run.diff)||DIFF);
   for(let i=0;i<n;i++){const e=genEq(G.mag[i]===1,dk);
-    G.shells.push({style:'eq',pr:pick([[0,1],[0,5],[0,3]]),f:e.f,tex:e.tex,postMin:e.postMin,xneg:e.xneg,n:eqNotes(e.f,0,PRE),np:eqNotes(e.f,PRE,PRE+POST)})}
+    G.shells.push({style:'eq',pr:pick([[0,1],[0,5],[0,3]]),f:e.f,tex:e.tex,postMin:e.postMin,xneg:e.xneg,riff:e.riff,n:eqNotes(e.f,0,PRE,e.riff),np:eqNotes(e.f,PRE,PRE+POST,e.riff)})}
 }
 
