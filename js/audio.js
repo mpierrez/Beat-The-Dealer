@@ -6,10 +6,17 @@ function mkCurve(k){const c=new Float32Array(2048);for(let i=0;i<2048;i++){const
 function initAudio(){
   if(ctx)return;
   ctx=new (window.AudioContext||window.webkitAudioContext)();
-  curveHard=mkCurve(6);curveSoft=mkCurve(1.4);
-  const comp=ctx.createDynamicsCompressor();comp.threshold.value=-12;comp.knee.value=8;comp.ratio.value=5;comp.attack.value=.004;comp.release.value=.18;
+  curveHard=mkCurve(6);curveSoft=mkCurve(IS_MOBILE?1.1:1.4);
+  const comp=ctx.createDynamicsCompressor();comp.threshold.value=IS_MOBILE?-16:-12;comp.knee.value=8;comp.ratio.value=IS_MOBILE?6:5;comp.attack.value=.004;comp.release.value=.18;
   const clip=ctx.createWaveShaper();clip.curve=curveSoft;const out=ctx.createGain();out.gain.value=VOLS[opt.vol]??.9;MASTER=out;
-  bus=ctx.createGain();bus.gain.value=.8;bus.connect(clip);clip.connect(comp);comp.connect(out);out.connect(ctx.destination);
+  bus=ctx.createGain();bus.gain.value=IS_MOBILE?.52:.8;
+  if(IS_MOBILE){
+    const hp=filt('highpass',85,.7);
+    bus.connect(hp);hp.connect(comp);comp.connect(clip);clip.connect(out);
+  }else{
+    bus.connect(clip);clip.connect(comp);comp.connect(out);
+  }
+  out.connect(ctx.destination);
   // hall reverb
   rev=ctx.createConvolver();const len=ctx.sampleRate*3.2,ir=ctx.createBuffer(2,len,ctx.sampleRate);
   for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6)*(i<ctx.sampleRate*.01?i/(ctx.sampleRate*.01):1)}

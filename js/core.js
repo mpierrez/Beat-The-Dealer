@@ -22,6 +22,7 @@ const store=(()=>{const P='btd.v1.',mem=new Map();let ok=true;
              return mem.has(k)?mem.get(k):structuredClone(d)},
     set(k,v){mem.set(k,v);if(ok)try{localStorage.setItem(P+k,JSON.stringify(v))}catch(e){}}}})();
 const RM=(()=>{try{return matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return false}})();
+const IS_MOBILE=(()=>{try{return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&matchMedia('(pointer: coarse) and (max-width: 1024px)').matches)}catch(e){return false}})();
 const opt=Object.assign({vol:3,shake:RM?0:1,flash:RM?0:1,hints:0,off:0},store.get('opt',{}));
 const VOLS=[0,.45,.7,.9];
 

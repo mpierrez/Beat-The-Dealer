@@ -81,8 +81,7 @@ let menuIdx=Math.max(0,MODE_KEYS.indexOf((store.get('last',{})||{}).mode));
 function titleRender(){
   const hi=table('classic')[0],last=store.get('last',{})||{};
   $('t1up').textContent='1UP '+String(last.s||0).padStart(6,'0');$('tHi').textContent=String(hi?hi.s:0).padStart(6,'0');
-  $('tCred').textContent=ctx?'01':'00';
-  $('tMarqTxt').textContent=MODE_KEYS.map(m=>{const e=table(m)[0];return`${MODES[m].name} 1ST ${e?e.n+' '+fmtD(e.s):'—'}`}).join('   ·   ')}
+  $('tCred').textContent=ctx?'01':'00';}
 function goTitle(){st.mode='title';show('scrTitle');themeMuffle(18000);titleRender();hideGame()}
 function goMenu(){initAudio();ctx.resume();uiLock=performance.now()+400;if(st.mode==='title')V.rack(now());
   st.mode='menu';show('scrMenu');themeStart();themeMuffle(2600);menuRender();hideGame()}
