@@ -75,7 +75,7 @@ function progression(){
     .filter(([a,b])=>!['dim','aug'].includes(quality(a))&&!['dim','aug'].includes(quality(b)));
   return pick(cands);
 }
-// ---------- mathematical riff generators (matching @the.lab67) ----------
+// ---------- procedural mathematical riff generators (matching @the.lab67) ----------
 function noteNamesForDegrees(degs){
   const names=['C','D\\flat','D','E\\flat','E','F','G\\flat','G','A\\flat','A','B\\flat','B'];
   const res=[];
@@ -86,51 +86,115 @@ function noteNamesForDegrees(degs){
   return res.join(',\\ ');
 }
 
-const RIFF_MATH={
-  sq: {
-    fn: k=>((k*k)%8),
-    cycle: [0, 1, 4, 1],
-    formula: `d_n = n^2 \\bmod 8 \\in \\{0, 1, 4\\}`
-  },
-  lcg: {
-    fn: k=>((5*k+3)%8),
-    cycle: [3, 0, 5, 2, 7, 4, 1, 6],
-    formula: `d_n = (5n+3) \\bmod 8 \\in \\{0, \\dots, 7\\}`
-  },
-  tri: {
-    fn: k=>Math.floor(k*(k+1)/2)%7,
-    cycle: [0, 1, 3, 6, 3, 1, 0],
-    formula: `d_n = \\tfrac{n(n+1)}{2} \\bmod 7 \\in \\{0, 1, 3, 6\\}`
-  },
-  arp: {
-    fn: k=>[0,2,4,7][k%4],
-    cycle: [0, 2, 4, 7],
-    formula: `d_n = \\text{arp}(n) \\in \\{0, 2, 4, 7\\}`
-  },
-  zig: {
-    fn: k=>Math.abs((k%8)-4),
-    cycle: [4, 3, 2, 1, 0, 1, 2, 3],
-    formula: `d_n = \\lvert (n \\bmod 8) - 4\\rvert \\in \\{0, 1, 2, 3, 4\\}`
-  },
-  alt: {
-    fn: k=>(k%2*2),
-    cycle: [0, 2],
-    formula: `d_n = 2\\,(n \\bmod 2) \\in \\{0, 2\\}`
-  },
-  sync: {
-    fn: k=>[0,0,2,4,4,7,4,2][k%8],
-    cycle: [0, 2, 4, 7],
-    formula: `d_n = \\text{sync}_{3+3+2}(n) \\in \\{0, 2, 4, 7\\}`
+// Procedural mathematical riff generator
+function generateProceduralRiff(forceFamily=null){
+  const families={
+    quad: ()=>{
+      const m=pick([6,7,8]), a=pick([1,2,3,5]), b=pick([0,0,1,2,3]), c=pick([0,1,2,3,4]);
+      const fn=n=>((a*n*n+b*n+c)%m+m)%m;
+      let expr='';
+      if(a===1&&b===0&&c===0)expr=`n^2 \\bmod ${m}`;
+      else if(a===1&&b===0)expr=`(n^2 + ${c}) \\bmod ${m}`;
+      else if(b===0&&c===0)expr=`${a}n^2 \\bmod ${m}`;
+      else if(b===0)expr=`(${a}n^2 + ${c}) \\bmod ${m}`;
+      else{
+        const aP=a===1?'n^2':`${a}n^2`, bP=b===1?'n':`${b}n`, cP=c===0?'':` + ${c}`;
+        expr=`(${aP} + ${bP}${cP}) \\bmod ${m}`;
+      }
+      return {fn,expr,family:'quad'};
+    },
+    lcg: ()=>{
+      const m=pick([6,7,8]), a=pick([2,3,5,7]), b=pick([0,1,2,3,5]);
+      const fn=n=>((a*n+b)%m+m)%m;
+      return {fn,expr:b===0?`${a}n \\bmod ${m}`:`(${a}n + ${b}) \\bmod ${m}`,family:'lcg'};
+    },
+    tri: ()=>{
+      const m=pick([6,7,8]), a=pick([1,2,3]), b=pick([0,0,1,2]);
+      const fn=n=>(Math.floor(n*(n+a)/2)+b)%m;
+      const frac=a===1?'\\tfrac{n(n+1)}{2}':`\\tfrac{n(n+${a})}{2}`;
+      return {fn,expr:b===0?`${frac} \\bmod ${m}`:`\\left(${frac} + ${b}\\right) \\bmod ${m}`,family:'tri'};
+    },
+    zig: ()=>{
+      const m=pick([6,8,10]), c=Math.floor(m/2), s=pick([0,0,1,2,3]);
+      const fn=n=>Math.abs(((n+s)%m)-c);
+      return {fn,expr:s===0?`\\lvert (n \\bmod ${m}) - ${c}\\rvert`:`\\lvert ((n + ${s}) \\bmod ${m}) - ${c}\\rvert`,family:'zig'};
+    },
+    bitwise: ()=>{
+      if(R()<.5){
+        const m=pick([7,8]);
+        return {fn:n=>((n^(n>>1))%m),expr:`(n \\oplus \\lfloor n/2 \\rfloor) \\bmod ${m}`,family:'bitwise'};
+      }
+      const m=pick([6,7,8]), mask=pick([1,3,5,6]);
+      return {fn:n=>((n^mask)%m),expr:`(n \\oplus ${mask}) \\bmod ${m}`,family:'bitwise'};
+    },
+    pulse: ()=>{
+      const m=pick([6,7,8]), a=pick([1,2,3,4]), b=pick([1,2,3,5]);
+      const aP=a===1?'(n \\bmod 2)':`${a}\\,(n \\bmod 2)`;
+      const bP=b===1?'(n \\bmod 4)':`${b}\\,(n \\bmod 4)`;
+      return {fn:n=>(a*(n%2)+b*(n%4))%m,expr:`(${aP} + ${bP}) \\bmod ${m}`,family:'pulse'};
+    },
+    fib: ()=>{
+      const m=pick([6,7,8]), s=pick([0,1,2,3]);
+      const F=[0,1];for(let i=2;i<=32;i++)F[i]=(F[i-1]+F[i-2])%m;
+      return {fn:n=>F[(n+s)%F.length],expr:s===0?`F_n \\bmod ${m}`:`F_{n+${s}} \\bmod ${m}`,family:'fib'};
+    },
+    sync: ()=>{
+      const m=pick([7,8]), p=pick([[0,2,4,7],[0,1,4,5],[0,3,5,7],[0,2,3,6],[0,0,3,5,5,7,5,3]]);
+      const name=p.length===4?'\\text{arp}_4':'\\text{sync}_8';
+      return {fn:n=>p[n%p.length]%m,expr:`${name}(n) \\bmod ${m}`,family:'sync'};
+    }
+  };
+
+  const famKeys=Object.keys(families);
+  for(let att=0;att<50;att++){
+    const k=forceFamily&&families[forceFamily]?forceFamily:pick(famKeys);
+    const gen=families[k]();
+    const vals=[];
+    for(let i=0;i<16;i++)vals.push(gen.fn(i));
+    if(vals.some(v=>!Number.isInteger(v)||v<0||v>7))continue;
+    const uniq=Array.from(new Set(vals));
+    if(uniq.length<2||uniq.length>6)continue;
+    let period=8;
+    for(const p of [2,3,4,6,8]){
+      let ok=true;
+      for(let i=0;i<16-p;i++){if(vals[i]!==vals[i+p]){ok=false;break;}}
+      if(ok){period=p;break;}
+    }
+    const cycle=vals.slice(0,Math.min(8,period));
+    const uniqSorted=[...uniq].sort((a,b)=>a-b);
+    const setStr=uniqSorted.join(',\\ ');
+    const formula=`d_n = ${gen.expr} \\in \\{${setStr}\\}`;
+    return {fn:gen.fn,formula,cycle,family:gen.family,vals};
   }
+  return {fn:k=>((k*k)%8),formula:`d_n = n^2 \\bmod 8 \\in \\{0,\\ 1,\\ 4\\}`,cycle:[0,1,4,1],family:'quad',vals:[0,1,4,1,0,1,4,1,0,1,4,1,0,1,4,1]};
+}
+
+const RIFF_MATH={
+  sq: { fn: k=>((k*k)%8), cycle: [0, 1, 4, 1], formula: `d_n = n^2 \\bmod 8 \\in \\{0, 1, 4\\}` }
 };
 
 function newGame(n=8,L=4,opts={}){
   const sc=opts.sc||pick(SCALES),key=opts.key||0;
   G={scale:sc.s,scaleTex:NAMES[key]+'\\ '+sc.tex,key,shells:[],mag:null};
-  const pool=shuffle(['lcg','tri','arp','zig','alt','sync']);
-  const riffOrder=['sq',...pool];
+
+  let prevFam='boss';
   for(let i=0;i<n-1;i++){
-    const rk=riffOrder[i%riffOrder.length],rf=RIFF_MATH[rk];
+    let rf;
+    if(i===0 && R()<.5){
+      rf={
+        fn: k=>((k*k)%8),
+        formula: `d_n = n^2 \\bmod 8 \\in \\{0, 1, 4\\}`,
+        cycle: [0, 1, 4, 1],
+        family: 'quad'
+      };
+    } else {
+      for(let t=0;t<10;t++){
+        rf=generateProceduralRiff();
+        if(rf.family!==prevFam) break;
+      }
+    }
+    prevFam=rf.family;
+
     const notes=[];
     for(let k=0;k<16;k++){
       const deg=rf.fn(k);
@@ -138,8 +202,9 @@ function newGame(n=8,L=4,opts={}){
     }
     const notesTex=`\\text{note} = \\text{scale}[d_n] : `+noteNamesForDegrees(rf.cycle);
     G.shells.push({
-      style:rk,
-      pr:[0,1],
+      style:rf.family,
+      dash:rf.family==='sync'||rf.family==='pulse',
+      pr:progression(),
       n:notes,
       formula:rf.formula,
       notesTex,
@@ -147,6 +212,7 @@ function newGame(n=8,L=4,opts={}){
       m2:notesTex
     });
   }
+
   const pr=[0,1];
   G.shells.push({
     style:'boss',

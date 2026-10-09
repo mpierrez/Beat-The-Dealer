@@ -14,7 +14,7 @@ const MODES={
   survival:{name:'SURVIVAL',col:'#ff3d6e',tag:"Dead man's magazine.",
     rules:['Magazine after magazine. 3 hearts.','A miss costs a heart. A perfect magazine heals.','The lock creeps closer. The key keeps rising.']},
   duel:{name:'VS DEALER',col:'#b06cff',tag:'One gun. Two players. Buckshot rules.',
-    rules:['LIVE shoots the Dealer. BLANK shoots you.','A blank on yourself: shoot again.','Three stages. Call his shells for points.']},
+    rules:['LIVE shoots the Dealer. BLANK shoots you.','A blank on yourself: shoot again.','Reduce Dealer hearts to 0 to win.']},
   daily:{name:'DAILY DEALER',col:'#f6d342',tag:'One seed per day. One ranked shot.',
     rules:['Same magazine for everyone today.','One ranked attempt, then practice.']},
 };
@@ -142,15 +142,15 @@ function startRun(mode){
   if(run)killRoute(run.route);
   const date=today();
   run={mode,route:mkRoute(bus,IS_MOBILE?.7:.85),date,sigma:0,shown:0,streak:0,bestM:1,correct:0,calls:0,shells:0,onBeat:0,maxW:0,late:0,
-    hp:3,hpMax:5,k:1,magOk:true,stage:1,H:2,hpD:2,nextWho:'you',hits:0,extra:0,stageHurt:false,won:false,perfect:0,lam:32,
+    hp:3,hpMax:3,k:1,magOk:true,stage:1,H:2,hpD:2,nextWho:'you',hits:0,extra:0,stageHurt:false,won:false,perfect:0,lam:32,
     ranked:false,practice:false,mod:null,qual:false,cpuStep:null,cpuCall:null,segT0:0,stageCard:false};
   const last=store.get('last',{})||{};last.mode=mode;store.set('last',last);
   if(mode==='daily'){
     R=mulberry32(daySeed(date));run.mod=MODS[rnd(MODS.length)];newGame(run.mod.n,run.mod.L);R=Math.random;
     const log=store.get('daily.log',{})||{};
     if(!log[date]){log[date]={start:Date.now(),mod:run.mod.name};store.set('daily.log',log);run.ranked=true}else run.practice=true}
-  else if(mode==='survival')newGame(3,1+rnd(2));
-  else if(mode==='duel'){run.H=2;run.hp=run.hpD=2;newGame(3,1)}
+  else if(mode==='survival'){run.hp=3;run.hpMax=3;newGame(3,1+rnd(2))}
+  else if(mode==='duel'){run.H=2;run.hp=2;run.hpD=2;newGame(3,1)}
   else newGame(8,4);
   st.grid=[];st.i=0;st.mode='intro';st.paused=false;st.who='you';st.rev=false;st.introT0=tb;st.introFlash=0;st.perm=null;
   show(null);$('scrPause').classList.add('hide');$('pauseBtn').style.display='block';$('ctrl').style.display='none';
@@ -236,10 +236,7 @@ function afterShell(tn){
     run.k++;run.magOk=true;const nn=Math.min(8,run.k+2);newGame(nn,1+rnd(nn-1),{key:(run.k-1)%6});return startReload(tn)}
   if(m==='duel'){
     if(run.hp<=0)return over(tn,false);
-    if(run.hpD<=0){run.sigma+=2000*run.stage+500*run.hp+(run.stageHurt?0:3000*run.stage);
-      if(run.stage>=3){run.sigma+=10000;return over(tn,true)}
-      run.stage++;run.H=run.stage+1;run.hp=run.hpD=run.H;run.stageHurt=false;run.nextWho='you';
-      const nn=2+rnd(7);newGame(nn,1+rnd(nn-1),run.stage===3?{sc:SCALES[3]}:{});return startReload(tn,true)}
+    if(run.hpD<=0){run.sigma+=5000+1000*run.hp+(run.stageHurt?0:2000);return over(tn,true)}
     if(st.i<n-1)return startShell(st.i+1,tn,run.nextWho);
     const nn=2+rnd(7);newGame(nn,1+rnd(nn-1));return startReload(tn)}
   if(st.i<n-1)return startShell(st.i+1,tn,'you');

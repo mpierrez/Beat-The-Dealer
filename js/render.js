@@ -223,7 +223,9 @@ function frame(){
     if(st.who==='dlr'&&run.cpuCall===null&&step>=run.cpuStep)cpuDecide();
     if(!st.rev&&st.guess===null&&!st.locked&&step>=run.lam){st.locked=1;lockButtons()}
     if(!st.rev&&step>=PRE)reveal();
-    if(step>=PRE+POST){afterShell(st.t0+(PRE+POST)*SD);if(st.mode==='play')step=(t-st.t0)/SD}}
+    const isDead=run&&(run.hp<=0||(run.mode==='duel'&&run.hpD<=0));
+    const pLen=isDead?14:POST;
+    if(step>=PRE+pLen){afterShell(st.t0+(PRE+pLen)*SD);if(st.mode==='play')step=(t-st.t0)/SD}}
   else if(st.mode==='play')step=(t-st.t0)/SD;
   if(inRun())hud();
   if(st.mode==='play'){if(!st.rev){const k=Math.max(0,(step-12)/20);st.tintTarget=[lerp(30,95,k),lerp(60,45,k),lerp(40,15,k),.5+.12*k]}

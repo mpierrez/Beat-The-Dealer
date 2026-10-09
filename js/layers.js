@@ -54,7 +54,7 @@ function drums(t0,phase,res){
 
 // math lines: KaTeX when available, plain-text fallback otherwise (file:// offline); cached; auto-fit to 680 px
 const TEXSYM={heartsuit:'♥',Sigma:'Σ',Delta:'Δ',omega:'ω',gamma:'γ',beta:'β',times:'×',cdot:'·',to:'→',Rightarrow:'⇒',varnothing:'∅',infty:'∞',
-  flat:'♭',pm:'±',mid:'|',mapsto:'↦',subset:'⊂',kappa:'κ',lambda:'λ',tau:'τ',le:'≤',ge:'≥',lim:'lim '};
+  flat:'♭',pm:'±',mid:'|',mapsto:'↦',subset:'⊂',kappa:'κ',lambda:'λ',tau:'τ',le:'≤',ge:'≥',lim:'lim ',oplus:'⊕',lfloor:'⌊',rfloor:'⌋',in:'∈',bmod:'mod',lvert:'|',rvert:'|',dots:'...'};
 function texToPlain(s){let o;
   // \x01 marks unwrapped groups so "\mid\text{ghost}" can't fuse into the unknown macro "\midghost"
   do{o=s;s=s.replace(/\\[td]?frac\{([^{}]*)\}\{([^{}]*)\}/g,'\x01$1/$2').replace(/\\(?:text|mathrm|boxed|mathbb)\{([^{}]*)\}/g,'\x01$1')

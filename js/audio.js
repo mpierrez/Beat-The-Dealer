@@ -6,18 +6,18 @@ function mkCurve(k){const c=new Float32Array(2048);for(let i=0;i<2048;i++){const
 function initAudio(){
   if(ctx)return;
   ctx=new (window.AudioContext||window.webkitAudioContext)();
-  curveHard=mkCurve(IS_MOBILE?2.5:5);curveSoft=mkCurve(IS_MOBILE?1.0:1.3);
+  curveHard=mkCurve(IS_MOBILE?2.0:5);curveSoft=mkCurve(IS_MOBILE?0.9:1.3);
   const comp=ctx.createDynamicsCompressor();
-  comp.threshold.value=IS_MOBILE?-18:-14;
-  comp.knee.value=12;
-  comp.ratio.value=IS_MOBILE?4:5;
-  comp.attack.value=.003;
-  comp.release.value=.14;
+  comp.threshold.value=IS_MOBILE?-20:-14;
+  comp.knee.value=16;
+  comp.ratio.value=IS_MOBILE?3.5:5;
+  comp.attack.value=.005;
+  comp.release.value=.2;
   const clip=ctx.createWaveShaper();clip.curve=curveSoft;
   const out=ctx.createGain();out.gain.value=VOLS[opt.vol]??.9;MASTER=out;
-  bus=ctx.createGain();bus.gain.value=IS_MOBILE?.38:.65;
+  bus=ctx.createGain();bus.gain.value=IS_MOBILE?.32:.65;
   if(IS_MOBILE){
-    const hp=filt('highpass',65,.7);
+    const hp=filt('highpass',70,.7);
     bus.connect(hp);hp.connect(comp);comp.connect(out);
   }else{
     bus.connect(clip);clip.connect(comp);comp.connect(out);
@@ -25,10 +25,10 @@ function initAudio(){
   out.connect(ctx.destination);
   // hall reverb
   rev=ctx.createConvolver();
-  const revLen=Math.round(ctx.sampleRate*(IS_MOBILE?0.8:2.4)),irCh=IS_MOBILE?1:2;
+  const revLen=Math.round(ctx.sampleRate*(IS_MOBILE?0.35:2.4)),irCh=IS_MOBILE?1:2;
   const ir=ctx.createBuffer(irCh,revLen,ctx.sampleRate);
   for(let c=0;c<irCh;c++){const d=ir.getChannelData(c);for(let i=0;i<revLen;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/revLen,2.6)*(i<ctx.sampleRate*.01?i/(ctx.sampleRate*.01):1)}
-  rev.buffer=ir;revSend=ctx.createGain();revSend.gain.value=IS_MOBILE?.35:.5;const rlp=ctx.createBiquadFilter();rlp.type='lowpass';rlp.frequency.value=IS_MOBILE?5000:6000;
+  rev.buffer=ir;revSend=ctx.createGain();revSend.gain.value=IS_MOBILE?.25:.5;const rlp=ctx.createBiquadFilter();rlp.type='lowpass';rlp.frequency.value=IS_MOBILE?4500:6000;
   revSend.connect(rlp);rlp.connect(rev);rev.connect(bus);
   // dotted-eighth echo
   dly=ctx.createDelay(1);dly.delayTime.value=SD*3;const fb=ctx.createGain();fb.gain.value=.32;const dlp=ctx.createBiquadFilter();dlp.type='lowpass';dlp.frequency.value=2800;
@@ -72,12 +72,12 @@ const V={
   // distorted 808 bass: pitch-dropping sine into hard saturation
   k808(t,p,d,gn=1){const f=fq(p),len=Math.max(.18,d),o=ctx.createOscillator();o.type='sine';
     o.frequency.setValueAtTime(f*2.2,t);o.frequency.exponentialRampToValueAtTime(f,t+.045);o.start(t);o.stop(t+len+.1);
-    const drive=ctx.createGain();drive.gain.value=IS_MOBILE?1.8:3.0;const ws=ctx.createWaveShaper();ws.curve=curveHard;ws.oversample='none';
-    const lp=filt('lowpass',6500,.7),gg=ctx.createGain();o.connect(drive);drive.connect(ws);ws.connect(lp);lp.connect(gg);
-    const fz=filt('highpass',1400,.7),fzg=ctx.createGain();fzg.gain.value=.6;ws.connect(fz);fz.connect(fzg);fzg.connect(gg);
-    gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(.18*gn,t+.004);gg.gain.setTargetAtTime(.13*gn,t+.02,.15);
-    gg.gain.setValueAtTime(.13*gn,t+len-.03);gg.gain.linearRampToValueAtTime(0,t+len+.02);out(gg,.04);
-    const clean=osc('sine',f,t,len),cg=ctx.createGain();clean.connect(cg);cg.gain.setValueAtTime(.14*gn,t);cg.gain.setValueAtTime(.14*gn,t+len-.03);cg.gain.linearRampToValueAtTime(0,t+len+.02);out(cg)},
+    const drive=ctx.createGain();drive.gain.value=IS_MOBILE?1.4:3.0;const ws=ctx.createWaveShaper();ws.curve=IS_MOBILE?curveSoft:curveHard;ws.oversample='none';
+    const lp=filt('lowpass',IS_MOBILE?4500:6500,.7),gg=ctx.createGain();o.connect(drive);drive.connect(ws);ws.connect(lp);lp.connect(gg);
+    const fz=filt('highpass',1400,.7),fzg=ctx.createGain();fzg.gain.value=.4;ws.connect(fz);fz.connect(fzg);fzg.connect(gg);
+    gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(.15*gn,t+.004);gg.gain.setTargetAtTime(.11*gn,t+.02,.15);
+    gg.gain.setValueAtTime(.11*gn,t+len-.03);gg.gain.linearRampToValueAtTime(0,t+len+.02);out(gg,.04);
+    const clean=osc('sine',f,t,len),cg=ctx.createGain();clean.connect(cg);cg.gain.setValueAtTime(.12*gn,t);cg.gain.setValueAtTime(.12*gn,t+len-.03);cg.gain.linearRampToValueAtTime(0,t+len+.02);out(cg)},
   // glass bell: FM with a slightly inharmonic partial, long ring, reverb + echo
   bell(t,p,d,gn=1){const f=fq(p),ring=1.6,c=osc('sine',f,t,ring),m=osc('sine',f*3.01,t,ring),mg=ctx.createGain();
     mg.gain.setValueAtTime(f*2.2,t);mg.gain.exponentialRampToValueAtTime(f*.08,t+.9);m.connect(mg);mg.connect(c.frequency);
@@ -87,9 +87,10 @@ const V={
     env(gg,t,.002,.24*gn,ring);out(gg,.55,.22)},
   reese(t,p,d,gn=1,df=2){const f=fq(p),lp=filt('lowpass',1600,2.5);
     lp.frequency.setValueAtTime(2200,t);lp.frequency.linearRampToValueAtTime(700,t+d);
-    for(const [ff,det] of [[f,0],[f+df,0],[f/2,5]]){const o=osc('sawtooth',ff,t,d);o.detune.value=det;o.connect(lp)}
+    const oscs=IS_MOBILE?[[f,0],[f/2,0]]:[[f,0],[f+df,0],[f/2,5]];
+    for(const [ff,det] of oscs){const o=osc('sawtooth',ff,t,d);o.detune.value=det;o.connect(lp)}
     const gg=ctx.createGain();lp.connect(gg);gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(.075*gn,t+.02);
-    gg.gain.setValueAtTime(.075*gn,t+d-.04);gg.gain.linearRampToValueAtTime(0,t+d);out(gg,.12,.1)},
+    gg.gain.setValueAtTime(.075*gn,t+d-.04);gg.gain.linearRampToValueAtTime(0,t+d);out(gg,IS_MOBILE?.08:.12,IS_MOBILE?.06:.1)},
   // warm supersaw pad chord + sub bass on the root (the reel's blank section: Fm → G♭)
   pad(t,deg,d,gn=1){const lp=filt('lowpass',1500,.6),gg=ctx.createGain();lp.connect(gg);
     lp.frequency.setValueAtTime(1800,t);lp.frequency.linearRampToValueAtTime(3200,t+d*.6);
@@ -103,8 +104,13 @@ const V={
     const sb=osc('sine',fq(root-24),t,d+.1),sg=ctx.createGain();sb.connect(sg);
     sg.gain.setValueAtTime(0,t);sg.gain.linearRampToValueAtTime(.18*gn,t+.03);sg.gain.setValueAtTime(.18*gn,t+d-.04);sg.gain.linearRampToValueAtTime(0,t+d+.05);out(sg)},
   sawwall(t,d,deg=0){const lp=filt('lowpass',300,1);lp.frequency.setValueAtTime(300,t);lp.frequency.exponentialRampToValueAtTime(3000,t+d);
-    const gg=ctx.createGain();lp.connect(gg);gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(.045,t+.3);gg.gain.setValueAtTime(.045,t+d-.2);gg.gain.linearRampToValueAtTime(0,t+d);out(gg,.3);
-    const r=semis(fitOct(deg,0,6));for(const iv of[-24,-12,-5,0,semis(deg+2)-semis(deg),7])for(const det of[-12,0,12]){const o=osc('sawtooth',fq(r+iv),t,d);o.detune.value=det;o.connect(lp)}},
+    const gg=ctx.createGain();lp.connect(gg);gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(.045,t+.3);gg.gain.setValueAtTime(.045,t+d-.2);gg.gain.linearRampToValueAtTime(0,t+d);out(gg,IS_MOBILE?.15:.3);
+    const r=semis(fitOct(deg,0,6));
+    if(IS_MOBILE){
+      for(const iv of[-12,0,7]){const o=osc('sawtooth',fq(r+iv),t,d);o.connect(lp)}
+    }else{
+      for(const iv of[-24,-12,-5,0,semis(deg+2)-semis(deg),7])for(const det of[-12,0,12]){const o=osc('sawtooth',fq(r+iv),t,d);o.detune.value=det;o.connect(lp)}
+    }},
   // thunder kick: long pitch sweep from the top down to A1, measured on the reel
   kick(t,v=1){const o=ctx.createOscillator();o.type='sine';
     o.frequency.setValueAtTime(400,t);o.frequency.exponentialRampToValueAtTime(105,t+.04);o.frequency.exponentialRampToValueAtTime(50,t+.26);
@@ -124,20 +130,27 @@ const V={
     gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(.14,t+d);gg.gain.linearRampToValueAtTime(0,t+d+.02);n.connect(bp);bp.connect(gg);out(gg,.25)},
   // the shot: crack + boom + rolling thunder tail
   gunshot(t){
-    const c=noise(t,.05),chp=filt('highpass',1800),cg=ctx.createGain();c.connect(chp);chp.connect(cg);env(cg,t,.0005,.4,.03);out(cg,.5);
+    const c=noise(t,.05),chp=filt('highpass',1800),cg=ctx.createGain();c.connect(chp);chp.connect(cg);env(cg,t,.0005,IS_MOBILE?.28:.4,.03);out(cg,IS_MOBILE?.3:.5);
     const n=noise(t,1.4),lp=filt('lowpass',7000,.5),ng=ctx.createGain();
     lp.frequency.setValueAtTime(7000,t);lp.frequency.exponentialRampToValueAtTime(160,t+1.0);
-    n.connect(lp);lp.connect(ng);env(ng,t,.001,.22,1.2);out(ng,.5);
+    n.connect(lp);lp.connect(ng);env(ng,t,.001,IS_MOBILE?.15:.22,1.2);out(ng,IS_MOBILE?.3:.5);
     const b=ctx.createOscillator();b.frequency.setValueAtTime(140,t);b.frequency.exponentialRampToValueAtTime(32,t+.5);
-    const bg=ctx.createGain();b.connect(bg);env(bg,t,.002,.6,1.0);out(bg,.2);b.start(t);b.stop(t+1.2);
+    const bg=ctx.createGain();b.connect(bg);env(bg,t,.002,IS_MOBILE?.35:.6,1.0);out(bg,.2);b.start(t);b.stop(t+1.2);
     const r=noise(t,1.8),rlp=filt('lowpass',140,.8),rg=ctx.createGain();r.connect(rlp);rlp.connect(rg);
-    rg.gain.setValueAtTime(0,t);rg.gain.linearRampToValueAtTime(.5,t+.1);rg.gain.exponentialRampToValueAtTime(1e-4,t+1.8);out(rg,.25)},
+    rg.gain.setValueAtTime(0,t);rg.gain.linearRampToValueAtTime(IS_MOBILE?.3:.5,t+.1);rg.gain.exponentialRampToValueAtTime(1e-4,t+1.8);out(rg,IS_MOBILE?.15:.25)},
   dryfire(t){const n=noise(t,.05),hp=filt('highpass',2500),gg=ctx.createGain();n.connect(hp);hp.connect(gg);env(gg,t,.0005,.35,.035);out(gg,.4);
     for(const [f,a] of [[2637,.07],[3951,.04],[5274,.025]]){const o=osc('sine',f,t+.004,1.5),og=ctx.createGain();o.connect(og);env(og,t+.004,.001,a,1.3);out(og,.8,.3)}},
   // the Dealer's lead (VS): square stack, no 2f partial, darker fixed low-pass
   dlead(t,p,d,gn=1){const f=fq(p),len=Math.min(d,.2),gg=ctx.createGain(),lp=filt('lowpass',2400,.8),k=.85*gn;
-    for(const det of[-9,0,9]){const o=osc('square',f,t,len+.15);o.detune.value=det;o.connect(lp)}
-    const sub=osc('square',f/2,t,len+.15),sg=ctx.createGain();sg.gain.value=.3;sub.connect(sg);sg.connect(lp);
+    if(IS_MOBILE){
+      const o=osc('square',f,t,len+.12);o.connect(lp);
+      const sub=osc('square',f/2,t,len+.12),sg=ctx.createGain();sg.gain.value=.25;sub.connect(sg);sg.connect(lp);
+    }else{
+      for(const det of[-9,0,9]){const o=osc('square',f,t,len+.15);o.detune.value=det;o.connect(lp)}
+      const sub=osc('square',f/2,t,len+.15),sg=ctx.createGain();sg.gain.value=.3;sub.connect(sg);sg.connect(lp);
+    }
+    lp.connect(gg);const p_=gg.gain;p_.setValueAtTime(0,t);p_.linearRampToValueAtTime(.09*k,t+.003);
+    p_.setTargetAtTime(.06*k,t+.01,.06);p_.setValueAtTime(.06*k,t+len);p_.linearRampToValueAtTime(0,t+len+.04);out(gg,IS_MOBILE?.08:.12,IS_MOBILE?.08:.16)},
     lp.connect(gg);const p_=gg.gain;p_.setValueAtTime(0,t);p_.linearRampToValueAtTime(.09*k,t+.003);
     p_.setTargetAtTime(.06*k,t+.01,.06);p_.setValueAtTime(.06*k,t+len);p_.linearRampToValueAtTime(0,t+len+.04);out(gg,.12,.16)},
   // arcade coin blip
