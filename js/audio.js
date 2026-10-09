@@ -151,8 +151,6 @@ const V={
     }
     lp.connect(gg);const p_=gg.gain;p_.setValueAtTime(0,t);p_.linearRampToValueAtTime(.09*k,t+.003);
     p_.setTargetAtTime(.06*k,t+.01,.06);p_.setValueAtTime(.06*k,t+len);p_.linearRampToValueAtTime(0,t+len+.04);out(gg,IS_MOBILE?.08:.12,IS_MOBILE?.08:.16)},
-    lp.connect(gg);const p_=gg.gain;p_.setValueAtTime(0,t);p_.linearRampToValueAtTime(.09*k,t+.003);
-    p_.setTargetAtTime(.06*k,t+.01,.06);p_.setValueAtTime(.06*k,t+len);p_.linearRampToValueAtTime(0,t+len+.04);out(gg,.12,.16)},
   // arcade coin blip
   coin(t){const o=osc('square',988,t,.16),hp=filt('highpass',300),gg=ctx.createGain();o.frequency.setValueAtTime(1319,t+.06);o.connect(hp);hp.connect(gg);
     gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(.07,t+.002);gg.gain.setValueAtTime(.07,t+.14);gg.gain.linearRampToValueAtTime(0,t+.16);out(gg,.1)},
