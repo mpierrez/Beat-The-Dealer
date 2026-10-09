@@ -51,9 +51,7 @@ function frame(){
     if(st.rev)for(const l of st.post){const h=drawLayer(l,cur,null,false);if(h)head=h}
     ticks(st.rev?[...st.pre,...st.post]:st.pre,cur);
     if(head&&st.mode==='play')dot(head.x,head.y,head.col);
-    if(st.rev&&st.mode==='play'){const pk=Math.max(0,1-(t-st.t0-PRE*SD)/.5);if(pk>0)dot(GXT,res?740:600,res?COL.r:COL.c,10,pk);
-      g.font='700 15px "Barlow Semi Condensed"';g.textAlign='left';g.fillStyle=res?COL.r:COL.c;
-      g.fillText(res?'÷4  (s = −2)':'×2  (s = +1)',res?GXT-100:GXT+12,res?712:620)}
+    if(st.rev&&st.mode==='play'){const pk=Math.max(0,1-(t-st.t0-PRE*SD)/.5);if(pk>0)dot(GXT,res?740:600,res?COL.r:COL.c,10,pk)}
     if(st.mode==='play'&&!st.rev)drawFuse(step);
     if(st.mode==='over'){const k=Math.min(1,(t-run.segT0)/2),c=run.won?'#ffd84a':'#ff3d6e';
       g.beginPath();g.moveTo(GX0,668);g.lineTo(lerp(GX0,GX1,k),668);glowStroke(c,3)}

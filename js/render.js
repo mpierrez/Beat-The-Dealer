@@ -30,13 +30,15 @@ function background(t){
   g.strokeStyle='rgba(90,150,110,.13)';g.lineWidth=1;
   for(let x=GX0;x<=GX1+1;x+=35){g.beginPath();g.moveTo(x,GY0);g.lineTo(x,GY1);g.stroke()}
   g.font='600 15px "Barlow Semi Condensed"';g.textAlign='left';g.textBaseline='middle';
-  for(let o=1;o<=5;o++){const y=781-71*(o-1);g.fillStyle='rgba(110,170,130,.45)';g.fillText('F'+o,GX0-45,y);
+  for(const v of[8,4,0,-4]){const y=AXIS-v*UNIT;g.fillStyle=v?'rgba(110,170,130,.45)':'rgba(200,200,230,.8)';g.fillText(String(v),GX0-40,y);
     g.strokeStyle='rgba(90,150,110,.07)';g.beginPath();g.moveTo(GX0,y);g.lineTo(GX1,y);g.stroke()}
 }
 function axes(showTrig,trigDash){
   g.strokeStyle='rgba(150,140,200,.7)';g.fillStyle='rgba(150,140,200,.8)';g.lineWidth=2;
   g.beginPath();g.moveTo(GX0-7,668);g.lineTo(GX1+10,668);g.stroke();
   g.beginPath();g.moveTo(GX1+17,668);g.lineTo(GX1+5,662);g.lineTo(GX1+5,674);g.fill();
+  g.font='600 14px "Barlow Semi Condensed"';g.textAlign='center';g.fillStyle='rgba(180,180,220,.7)';
+  if(showTrig)for(const xv of[0,2,4,6,8]){const xx=X(xv*8);g.fillRect(xx-1,664,2,8);g.fillText('x='+xv,xx,690)}
   if(!showTrig)return;
   g.beginPath();g.moveTo(GXT,GY1);g.lineTo(GXT,GY0+4);g.stroke();
   g.beginPath();g.moveTo(GXT,GY0-4);g.lineTo(GXT-6,GY0+8);g.lineTo(GXT+6,GY0+8);g.fill();
@@ -56,7 +58,7 @@ function drawLayer(l,cur,colOverride,labels){
     const passes=l.mode==='reese'?2:1;
     for(let ps=0;ps<passes;ps++){g.beginPath();let prevY=null,prevE=null;
       for(const n of vis){const e=Math.min(n.s+n.d,cur),x1=X(n.s),x2=X(e);
-        let y=Y(n.p);if(ps)y+=2+(1+5*(n.s%32)/32)*(l.wide?2.4:1.1)*((n.s%4)/4+.6);
+        let y=n.y!=null?n.y:Y(n.p);if(ps)y+=2+(1+5*(n.s%32)/32)*(l.wide?2.4:1.1)*((n.s%4)/4+.6);
         if(prevY===null||prevE<n.s-.01)g.moveTo(x1,y);else{g.lineTo(x1,prevY+(l.mode==='step'?4:0));g.lineTo(x1,y)}
         g.lineTo(x2,y);prevY=y;prevE=n.s+n.d;head=[x2,y]}
       glowStroke(col,ps?1.6:3,ps?.75:1)}
@@ -114,7 +116,7 @@ function introVideo(T,n,L){
     if(al>0){g.save();g.globalAlpha=al;g.textAlign='center';g.textBaseline='alphabetic';const xl=L?(pos(0)+pos(L-1))/2:CX,xb=n-L?(pos(L)+pos(n-1))/2:CX;
       g.font='700 30px "Barlow Semi Condensed"';g.shadowBlur=14;
       if(L){g.fillStyle='#ff2d55';g.shadowColor='#ff2d55';g.fillText(`${L} LIVE`,xl,744)}if(n-L){g.fillStyle='#62e6ff';g.shadowColor='#62e6ff';g.fillText(`${n-L} BLANK`,xb,744)}
-      g.shadowBlur=0;g.font='600 15px "Barlow Semi Condensed"';g.fillStyle='#cfd8d2';if(L)g.fillText('the riff drops 2 octaves',xl,768);if(n-L)g.fillText('it turns into bells',xb,768);g.restore()}}
+      g.shadowBlur=0;g.font='600 15px "Barlow Semi Condensed"';g.fillStyle='#cfd8d2';if(L)g.fillText('f goes below 0',xl,768);if(n-L)g.fillText('f stays above 0',xb,768);g.restore()}}
   // queue position: after shell k leaves, the rest slide one slot left (eased, done before the next launch)
   const f=(T-LOAD0)/LOADG,shift=T<LOAD0?0:Math.floor(f)+smooth((f-Math.floor(f))/.75);
   for(let j=0;j<n;j++){let cx=pos(j),top=578,w=42,h=98,kind=j<L?'live':'blank',gl=.8,al=Math.min(1,T/.08);
@@ -143,7 +145,7 @@ function introDraw(t,T0,n,L,plan){
       if(L){g.fillStyle='#ff2d55';g.shadowColor='#ff2d55';g.fillText(`${L} LIVE`,xl,744)}
       if(n-L){g.fillStyle='#62e6ff';g.shadowColor='#62e6ff';g.fillText(`${n-L} BLANK`,xb,744)}
       g.shadowBlur=0;g.font='600 15px "Barlow Semi Condensed"';g.fillStyle='#cfd8d2';
-      if(L)g.fillText('the riff drops 2 octaves',xl,768);if(n-L)g.fillText('it turns into bells',xb,768);g.restore()}}
+      if(L)g.fillText('f goes below 0',xl,768);if(n-L)g.fillText('f stays above 0',xb,768);g.restore()}}
   for(let j=0;j<n;j++){
     const kind0=j<L?'live':'blank';let cx=pos(j),top=578,w=42,h=98,kind=kind0,gl=.8;
     if(plan.drop&&T<a){const td=dropAt(plan,j,n);if(T<td)continue;

@@ -133,19 +133,57 @@ function finishRiff(r){
   const sh=hi>16?-12:lo<-3?12:0;r.n.forEach(x=>x.p+=sh);
   return r;
 }
-// a magazine of n shells (L live): n-1 riffs from a style bag, then the boss.
-// opts: sc (scale entry, default random), key (semitones), tau (tell probability), tellAll
+// ---------- equations: every shell is a function f(x). The graph shows it up to the trigger (x = 4).
+// LIVE  = f goes below 0 somewhere in (4, 8]  -> the riff falls under the axis into the 808
+// BLANK = f stays at or above 0 until x = 8    -> the riff stays up, glass bells
+const XT=4,XE=8,AXIS=668,UNIT=16;          // x per shell: 0..8 (s = 8x sixteenths); y pixels per unit of f
+const fN=v=>Number.isInteger(v)?String(v):String(+v.toFixed(2));
+const sg=(v,first)=>v<0?`- ${fN(-v)}`:first?fN(v):`+ ${fN(v)}`;   // signed term for TeX
+const xm=c=>c===0?'x':`(x ${sg(-c)})`;                               // (x - c)
+const EQ={
+  easy:[
+    ()=>{const a=2+rnd(9),b=pick([.5,1,1,1.5,2]);return{f:x=>a-b*x,tex:`${a} - ${b===1?'':fN(b)}x`}},
+    ()=>{const a=rnd(5),b=pick([.5,1]);return{f:x=>a+b*x,tex:`${a?a+' + ':''}${b===1?'':fN(b)}x`}},
+    ()=>{const c=2+rnd(7);return{f:x=>c-x,tex:`${c} - x`}},
+  ],
+  normal:[
+    ()=>{const a=3+rnd(10),c=1+rnd(3);return{f:x=>a-(x-c)**2,tex:`${a} - ${xm(c)}^2`}},
+    ()=>{const c=5+rnd(3),a=1+rnd(8);return{f:x=>(x-c)**2-a,tex:`${xm(c)}^2 - ${a}`}},
+    ()=>{const a=2+rnd(5),b=1+rnd(7);return{f:x=>a+b*Math.sin(x),tex:`${a} + ${b===1?'':b}\\sin x`}},
+    ()=>{const a=2+rnd(12),k=2+rnd(3);return{f:x=>a-x*x/k,tex:`${a} - \\tfrac{x^2}{${k}}`}},
+    ()=>{const a=2+rnd(9),b=pick([.5,1,1.5,2]);return{f:x=>a-b*x,tex:`${a} - ${b===1?'':fN(b)}x`}},
+  ],
+  hard:[
+    ()=>{const a=1+rnd(5),b=1+rnd(5),c=2+rnd(5);return{f:x=>c+a*Math.cos(x)-b*Math.sin(x/2),tex:`${c} + ${a===1?'':a}\\cos x - ${b===1?'':b}\\sin\\tfrac{x}{2}`}},
+    ()=>{const r1=4+rnd(4)+.5,r2=r1+1+rnd(4),k=pick([1,2,3]);return{f:x=>(x-r1)*(x-r2)/k,tex:`\\tfrac{${xm(r1)}${xm(r2)}}{${k}}`}},
+    ()=>{const a=2+rnd(8),b=pick([1,1.5,2]),c=1+rnd(4);return{f:x=>a-b*Math.abs(x-c),tex:`${a} - ${b===1?'':fN(b)}\\lvert x ${sg(-c)}\\rvert`}},
+    ()=>{const c=2+rnd(6),a=1+rnd(6);return{f:x=>c+a*Math.sin(Math.PI*x/4),tex:`${c} + ${a===1?'':a}\\sin\\tfrac{\\pi x}{4}`}},
+    ()=>{const a=4+rnd(10),k=pick([4,6,8]),b=pick([1,2]);return{f:x=>a-x*x*x/(k*k)+b*Math.sin(2*x),tex:`${a} - \\tfrac{x^3}{${k*k}} + ${b===1?'':b}\\sin 2x`}},
+  ],
+};
+// draw a function that gives the wanted answer (rejection sampling; the pre-trigger part always stays above 0)
+function genEq(live,dk){
+  const fams=EQ[dk]||EQ.normal;
+  for(let tries=0;tries<600;tries++){
+    const e=pick(fams)();let ok=true,preMax=-1e9,postMin=1e9,postMax=-1e9,xneg=null;
+    for(let x=0;x<=XE+1e-9;x+=.05){const v=e.f(x);
+      if(x<=XT){if(v<.4||v>10.5){ok=false;break}preMax=Math.max(preMax,v)}
+      else{if(v>10.5||v<-7.5){ok=false;break}postMin=Math.min(postMin,v);postMax=Math.max(postMax,v);if(xneg===null&&v<0)xneg=x}}
+    if(!ok)continue;
+    if(live?postMin<=-.6:postMin>=.4)return{...e,postMin,xneg};
+  }
+  return live?{f:x=>6-x,tex:'6 - x',postMin:-2,xneg:6}:{f:x=>2+x/2,tex:'2 + 0.5x',postMin:4,xneg:null};
+}
+// notes: one per eighth, pitch = f(x) rounded onto the scale, y = the real value of f
+function eqNotes(f,s0,s1){const o=[];for(let s=s0;s<s1;s+=2){const x=s/8,v=f(x),deg=Math.round(Math.max(-7,Math.min(10,v)));
+  o.push({s,d:2,p:semis(deg),y:Math.max(GY0,Math.min(GY1,AXIS-v*UNIT)),v})}return o}
+// a magazine of n shells (L live): one function per shell, chosen to match its LIVE/BLANK
 function newGame(n=8,L=4,opts={}){
   const sc=opts.sc||pick(SCALES),key=opts.key||0;
   G={scale:sc.s,scaleTex:NAMES[key]+'\\ '+sc.tex,key,shells:[],mag:null};
-  let bag=[],last=null,prev=null;
-  for(let i=0;i<n-1;i++){
-    if(!bag.length){bag=shuffle(Object.keys(GEN));if(bag[0]===last)[bag[0],bag[1]]=[bag[1],bag[0]]}
-    const style=last=bag.shift();
-    let pr;do pr=progression();while(prev&&pr+''===prev+'');prev=pr;
-    G.shells.push({style,pr,...finishRiff(GEN[style](pr))})}
-  const pr=progression();G.shells.push({style:'boss',pr,n:[],m1:'',m2:'1 = 808\\text{ hit}\\quad +\\text{ saw wall} + \\text{riff \\#1 as bells}',cap:'the final boss plays the magazine: live = 1'});
   G.mag=shuffle(Array.from({length:n},(_,j)=>j<L?1:0));
-  for(const sh of G.shells)sh.tell=sh.style!=='boss'&&!!(opts.tellAll||opts.tau>0&&R()<opts.tau);
+  const dk=opts.diff||(typeof run!=='undefined'&&run&&run.mode==='daily'?'normal':(run&&run.diff)||DIFF);
+  for(let i=0;i<n;i++){const e=genEq(G.mag[i]===1,dk);
+    G.shells.push({style:'eq',pr:pick([[0,1],[0,5],[0,3]]),f:e.f,tex:e.tex,postMin:e.postMin,xneg:e.xneg,n:eqNotes(e.f,0,PRE),np:eqNotes(e.f,PRE,PRE+POST)})}
 }
 
