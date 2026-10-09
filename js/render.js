@@ -21,22 +21,22 @@ function drawShell(cx,top,w,h,kind,glow=0,alpha=1){
 const lerp=(a,b,t)=>a+(b-a)*t;
 function background(t){
   const tt=st.tint,tg=st.tintTarget;for(let k=0;k<4;k++)tt[k]=lerp(tt[k],tg[k],.06);
-  g.fillStyle='#050806';g.fillRect(0,0,720,1280);
-  const rg=g.createRadialGradient(360,640,40,360,640,820);
+  g.fillStyle='#050806';g.fillRect(0,0,SW,1280);
+  const rg=g.createRadialGradient(CX,640,40,CX,640,Math.max(820,SW*.6));
   rg.addColorStop(0,`rgba(${tt[0]|0},${tt[1]|0},${tt[2]|0},${tt[3]})`);rg.addColorStop(1,'rgba(0,0,0,0)');
-  g.fillStyle=rg;g.fillRect(0,0,720,1280);
+  g.fillStyle=rg;g.fillRect(0,0,SW,1280);
   g.strokeStyle='rgba(120,160,130,.05)';g.lineWidth=1.2;
   for(let k=0;k<3;k++){g.beginPath();g.ellipse(GXT,668,150,60,k*Math.PI/3+t*.05,0,Math.PI*2);g.stroke()}
   g.strokeStyle='rgba(90,150,110,.13)';g.lineWidth=1;
   for(let x=GX0;x<=GX1+1;x+=35){g.beginPath();g.moveTo(x,GY0);g.lineTo(x,GY1);g.stroke()}
   g.font='600 15px "Barlow Semi Condensed"';g.textAlign='left';g.textBaseline='middle';
-  for(let o=1;o<=5;o++){const y=781-71*(o-1);g.fillStyle='rgba(110,170,130,.45)';g.fillText('F'+o,30,y);
+  for(let o=1;o<=5;o++){const y=781-71*(o-1);g.fillStyle='rgba(110,170,130,.45)';g.fillText('F'+o,GX0-45,y);
     g.strokeStyle='rgba(90,150,110,.07)';g.beginPath();g.moveTo(GX0,y);g.lineTo(GX1,y);g.stroke()}
 }
 function axes(showTrig,trigDash){
   g.strokeStyle='rgba(150,140,200,.7)';g.fillStyle='rgba(150,140,200,.8)';g.lineWidth=2;
-  g.beginPath();g.moveTo(68,668);g.lineTo(645,668);g.stroke();
-  g.beginPath();g.moveTo(652,668);g.lineTo(640,662);g.lineTo(640,674);g.fill();
+  g.beginPath();g.moveTo(GX0-7,668);g.lineTo(GX1+10,668);g.stroke();
+  g.beginPath();g.moveTo(GX1+17,668);g.lineTo(GX1+5,662);g.lineTo(GX1+5,674);g.fill();
   if(!showTrig)return;
   g.beginPath();g.moveTo(GXT,GY1);g.lineTo(GXT,GY0+4);g.stroke();
   g.beginPath();g.moveTo(GXT,GY0-4);g.lineTo(GXT-6,GY0+8);g.lineTo(GXT+6,GY0+8);g.fill();
@@ -88,7 +88,7 @@ function ticks(Ls,cur){
     g.fillStyle=latest?'rgba(140,255,180,.95)':'rgba(70,190,120,.55)';g.fillRect(x,826-h-(latest?6:0),2,h+(latest?6:0))}}
 }
 // shell row (n ≤ 10): revealed shells coloured, current one framed (amber = you, violet = Dealer), under-bar per resolved call, pop on reveal
-const ROW={sp:46,w:26,h:64,top:300},rowX=(j,n)=>360+(j-(n-1)/2)*ROW.sp;
+const ROW={sp:46,w:26,h:64,top:300},rowX=(j,n)=>CX+(j-(n-1)/2)*ROW.sp;
 const BAR={ok:'#6dffa0',bad:'#ff6b6b',late:'#ffb347',dlr:'#b06cff'};
 function topRow(t){
   const n=G.mag.length,{w,h,top}=ROW,amn=run&&run.amnesia,play=st.mode==='play',kt=t-(st.t0+PRE*SD);
@@ -109,9 +109,9 @@ const dropAt=(plan,j,n)=>plan.drop[0]+j*Math.min(plan.drop[1],(plan.drop[0]<.1?.
 const LOAD0=.5,LOADG=SD,LOADD=SD,loadAt=j=>LOAD0+j*LOADG;
 const smooth=x=>x<=0?0:x>=1?1:x*x*(3-2*x);
 function introVideo(T,n,L){
-  const bs=Math.min(62,560/Math.max(1,n-1)),pos=j=>360+(j-(n-1)/2)*bs,hj=j=>Math.sin(j*12.9898+n*78.233)*.5;
+  const bs=Math.min(62,560/Math.max(1,n-1)),pos=j=>CX+(j-(n-1)/2)*bs,hj=j=>Math.sin(j*12.9898+n*78.233)*.5;
   if(T<.45){const al=Math.min(1,Math.max(0,(.42-T)/.12))*Math.min(1,T/.08);
-    if(al>0){g.save();g.globalAlpha=al;g.textAlign='center';g.textBaseline='alphabetic';const xl=L?(pos(0)+pos(L-1))/2:360,xb=n-L?(pos(L)+pos(n-1))/2:360;
+    if(al>0){g.save();g.globalAlpha=al;g.textAlign='center';g.textBaseline='alphabetic';const xl=L?(pos(0)+pos(L-1))/2:CX,xb=n-L?(pos(L)+pos(n-1))/2:CX;
       g.font='700 30px "Barlow Semi Condensed"';g.shadowBlur=14;
       if(L){g.fillStyle='#ff2d55';g.shadowColor='#ff2d55';g.fillText(`${L} LIVE`,xl,744)}if(n-L){g.fillStyle='#62e6ff';g.shadowColor='#62e6ff';g.fillText(`${n-L} BLANK`,xb,744)}
       g.shadowBlur=0;g.font='600 15px "Barlow Semi Condensed"';g.fillStyle='#cfd8d2';if(L)g.fillText('the riff drops 2 octaves',xl,768);if(n-L)g.fillText('it turns into bells',xb,768);g.restore()}}
@@ -132,13 +132,13 @@ function introVideo(T,n,L){
       g.beginPath();g.arc(rowX(j,n),ROW.top+ROW.h/2,24+22*smooth(kr),0,7);g.stroke();g.restore()}}
 }
 function introDraw(t,T0,n,L,plan){
-  const T=t-T0,bs=Math.min(62,560/Math.max(1,n-1)),pos=j=>360+(j-(n-1)/2)*bs,{a,b,c}=plan;
+  const T=t-T0,bs=Math.min(62,560/Math.max(1,n-1)),pos=j=>CX+(j-(n-1)/2)*bs,{a,b,c}=plan;
   if(plan.video){introVideo(T,n,L);introText(T,plan);return}
   if(!st.perm||st.perm.length!==n)st.perm=shuffle([...Array(n).keys()],Math.random);
   // labels under the loaded magazine (fade out when the shuffle starts)
   if(plan.labels&&T<a+.3){const al=Math.min(1,Math.max(0,(T-dropAt(plan,n-1,n))/.25))*Math.max(0,Math.min(1,(a+.3-T)/.3));
     if(al>0){g.save();g.globalAlpha=al;g.textAlign='center';g.textBaseline='alphabetic';
-      const xl=L?(pos(0)+pos(L-1))/2:360,xb=n-L?(pos(L)+pos(n-1))/2:360;
+      const xl=L?(pos(0)+pos(L-1))/2:CX,xb=n-L?(pos(L)+pos(n-1))/2:CX;
       g.font='700 30px "Barlow Semi Condensed"';g.shadowBlur=14;
       if(L){g.fillStyle='#ff2d55';g.shadowColor='#ff2d55';g.fillText(`${L} LIVE`,xl,744)}
       if(n-L){g.fillStyle='#62e6ff';g.shadowColor='#62e6ff';g.fillText(`${n-L} BLANK`,xb,744)}
@@ -161,19 +161,39 @@ function introText(T,plan){
   if(plan.text&&T>3.0){const fade=Math.max(0,Math.min(1,(INTRO-.1-T)/.5));g.save();g.textBaseline='alphabetic';
     // LIVE or BLANK? slams in, GUESS RIGHT. types in, ...OR ELSE. hits with the gunshot
     const k=Math.min(1,(T-3)/.18),sc=1+.5*(1-k)*(1-k);g.globalAlpha=k*fade;
-    g.translate(360,598);g.scale(sc,sc);
+    g.translate(CX,598);g.scale(sc,sc);
     g.font='700 58px "Barlow Semi Condensed"';const w1=g.measureText('LIVE').width;g.font='700 32px "Barlow Semi Condensed"';const w2=g.measureText(' or ').width;
     g.font='700 58px "Barlow Semi Condensed"';const w3=g.measureText('BLANK?').width;let x=-(w1+w2+w3)/2;g.textAlign='left';
     g.shadowBlur=20;g.shadowColor='#ff2d55';g.fillStyle='#ff2d55';g.fillText('LIVE',x,0);x+=w1;
     g.shadowBlur=0;g.font='700 32px "Barlow Semi Condensed"';g.fillStyle='#fff';g.fillText(' or ',x,0);x+=w2;
     g.font='700 58px "Barlow Semi Condensed"';g.shadowColor='#62e6ff';g.shadowBlur=20;g.fillStyle='#62e6ff';g.fillText('BLANK?',x,0);
     g.setTransform(1,0,0,1,0,0);g.shadowBlur=0;g.textAlign='center';g.globalAlpha=fade;
-    if(T>3.5){const s='GUESS RIGHT.';g.font='700 36px "Barlow Semi Condensed"';g.fillStyle='#fff';g.fillText(s.slice(0,Math.ceil((T-3.5)/.05)),360,656)}
+    if(T>3.5){const s='GUESS RIGHT.';g.font='700 36px "Barlow Semi Condensed"';g.fillStyle='#fff';g.fillText(s.slice(0,Math.ceil((T-3.5)/.05)),CX,656)}
     if(T>plan.flash){const j=Math.max(0,1-(T-plan.flash)/.25),dx=(Math.random()-.5)*14*j;
       g.font='700 44px "Barlow Semi Condensed"';g.fillStyle='#ff2d55';g.shadowColor='#ff2d55';g.shadowBlur=24;
-      g.globalAlpha=fade*.5;g.fillStyle='#00e5ff';g.fillText('...OR ELSE.',360+dx-4*j,722);
-      g.globalAlpha=fade;g.fillStyle='#ff2d55';g.fillText('...OR ELSE.',360+dx,722)}
+      g.globalAlpha=fade*.5;g.fillStyle='#00e5ff';g.fillText('...OR ELSE.',CX+dx-4*j,722);
+      g.globalAlpha=fade;g.fillStyle='#ff2d55';g.fillText('...OR ELSE.',CX+dx,722)}
     g.restore()}
   if(plan.flash&&T>plan.flash&&!st.introFlash){st.introFlash=1;st.flashT=now();st.flashCol='rgba(255,60,90,.55)';st.shakeT=now();st.tintTarget=[160,10,40,.7]}
 }
 
+
+// title: a riff-shaped trace scrolls across the full width, red 808 spikes and cyan bells echo it, the magazine fans out below
+function titleScene(t){
+  const bp=theme?((t-(theme.next-2))%.5+.5)%.5:(performance.now()/1000)%.5,pulse=Math.exp(-bp*9);   // beat phase (title theme when it plays)
+  const y0=650,amp=70,L=GX0-40,Rr=GX1+40,sp=t*90;
+  const wave=(x,o)=>{const u=(x+sp+o)/58,k=Math.floor(u);const v=[0,4,1,4,0,7,1,4][((k%8)+8)%8];return y0-amp*.42*v/2-(u-k<.08?8*pulse:0)};
+  g.save();
+  // faint grid sweep
+  g.strokeStyle=`rgba(90,150,110,${.06+.08*pulse})`;g.lineWidth=1;for(let x=L;x<=Rr;x+=35){g.beginPath();g.moveTo(x,y0-170);g.lineTo(x,y0+170);g.stroke()}
+  g.strokeStyle='rgba(150,140,200,.45)';g.lineWidth=2;g.beginPath();g.moveTo(L,y0+40);g.lineTo(Rr,y0+40);g.stroke();
+  // echoes: red drop (two octaves down, spiky) and cyan bells (an octave up), then the yellow riff on top
+  for(const [col,off,dy,a,w] of [['#ff3d6e',29,150,.5,2.5],['#7ef2ff',13,-150,.45,2.5],['#ffd84a',0,0,1,4]]){
+    g.beginPath();for(let x=L;x<=Rr;x+=3){const y=wave(x,off)+dy;x===L?g.moveTo(x,y):g.lineTo(x,y)}
+    g.globalAlpha=a*(.75+.25*pulse);g.shadowColor=col;g.shadowBlur=14+10*pulse;g.strokeStyle=col;g.lineWidth=w;g.stroke()}
+  g.globalAlpha=1;g.shadowBlur=0;
+  // trigger line in the middle with a playhead dot
+  g.strokeStyle='rgba(255,170,90,.55)';g.setLineDash([6,6]);g.beginPath();g.moveTo(CX,y0-180);g.lineTo(CX,y0+180);g.stroke();g.setLineDash([]);
+  dot(CX,wave(CX,0),'#ffd84a',7+3*pulse);
+  g.restore();
+}

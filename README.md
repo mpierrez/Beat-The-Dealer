@@ -11,7 +11,7 @@ Modes: Classic, Survival, VS Dealer, Daily Dealer. There is a local Hall of Fame
 
 Open `index.html` in a browser. KaTeX and the fonts load from a CDN.
 
-The game runs on desktop and mobile. On a wide screen, the portrait stage is centred, the sides show a blurred copy of the game, and `F` toggles fullscreen.
+The game runs on desktop and mobile. On a wide screen the stage stretches to the full width (same height, wider scope); on a phone it keeps the 9:16 reel frame. `F` toggles fullscreen.
 
 ## Code layout
 

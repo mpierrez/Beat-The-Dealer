@@ -2,12 +2,12 @@
 "use strict";
 // ---------- main loop ----------
 function drawFuse(step){
-  const k=Math.min(1,step/PRE);g.fillStyle='rgba(255,255,255,.12)';rr(253,462,214,6,3);g.fill();
-  const gr=g.createLinearGradient(253,0,467,0);gr.addColorStop(0,'#e8743a');gr.addColorStop(1,'#ff5d8a');g.fillStyle=gr;rr(253,462,214*k,6,3);g.fill();
-  g.fillStyle='rgba(255,255,255,.35)';for(let b=1;b<8;b++)g.fillRect(253+214*b/8-1,460,2,10);
-  if(run.lam<PRE){g.fillStyle='#ffb347';g.fillRect(253+214*run.lam/PRE-2,455,4,20)}
-  if(run.cpuCall!==null&&run.cpuAt!=null){g.fillStyle=COL.v;g.fillRect(253+214*Math.min(1,run.cpuAt/PRE)-2,457,4,16)}
-  g.fillStyle='#fff';g.beginPath();g.arc(253+214*k,465,7,0,7);g.fill()}
+  const k=Math.min(1,step/PRE);g.fillStyle='rgba(255,255,255,.12)';const F0=CX-107,FW=214;rr(F0,462,FW,6,3);g.fill();
+  const gr=g.createLinearGradient(F0,0,F0+FW,0);gr.addColorStop(0,'#e8743a');gr.addColorStop(1,'#ff5d8a');g.fillStyle=gr;rr(F0,462,FW*k,6,3);g.fill();
+  g.fillStyle='rgba(255,255,255,.35)';for(let b=1;b<8;b++)g.fillRect(F0+FW*b/8-1,460,2,10);
+  if(run.lam<PRE){g.fillStyle='#ffb347';g.fillRect(F0+FW*run.lam/PRE-2,455,4,20)}
+  if(run.cpuCall!==null&&run.cpuAt!=null){g.fillStyle=COL.v;g.fillRect(F0+FW*Math.min(1,run.cpuAt/PRE)-2,457,4,16)}
+  g.fillStyle='#fff';g.beginPath();g.arc(F0+FW*k,465,7,0,7);g.fill()}
 function drawLock(step){if(!run||run.lam>=PRE||st.rev)return;const x=X(run.lam);
   g.save();if(step<run.lam)g.setLineDash([6,6]);g.strokeStyle='rgba(255,179,71,.85)';g.lineWidth=2;g.beginPath();g.moveTo(x,GY0+10);g.lineTo(x,GY1);g.stroke();g.restore();
   g.font='700 13px "Barlow Semi Condensed"';g.textAlign='center';g.fillStyle='#ffb347';g.fillText('LOCK',x,GY0+22)}
@@ -43,7 +43,7 @@ function frame(){
     // on the reveal a band sweeps left to right and recolours the riff (yellow -> red / cyan) as it passes
     const tT=st.t0+PRE*SD,bk=st.rev?(t-tT)/.42:1;
     if(st.rev&&bk<1&&st.mode==='play'){const bx=lerp(GX0-30,GXT+20,Math.max(0,bk));
-      g.save();g.beginPath();g.rect(bx,0,720,1280);g.clip();for(const l of st.pre)drawLayer(l,Math.min(cur,PRE),null,true);g.restore();
+      g.save();g.beginPath();g.rect(bx,0,SW,1280);g.clip();for(const l of st.pre)drawLayer(l,Math.min(cur,PRE),null,true);g.restore();
       g.save();g.beginPath();g.rect(0,0,bx,1280);g.clip();for(const l of st.pre)drawLayer(l,Math.min(cur,PRE),oc,true);g.restore();
       const bc=res?'255,40,80':'110,230,255',gr=g.createLinearGradient(bx-40,0,bx+14,0);gr.addColorStop(0,`rgba(${bc},0)`);gr.addColorStop(.75,`rgba(${bc},.16)`);gr.addColorStop(1,`rgba(${bc},.38)`);
       g.fillStyle=gr;g.fillRect(bx-40,GY0-10,54,GY1-GY0+20)}
@@ -57,9 +57,9 @@ function frame(){
     if(st.mode==='play'&&!st.rev)drawFuse(step);
     if(st.mode==='over'){const k=Math.min(1,(t-run.segT0)/2),c=run.won?'#ffd84a':'#ff3d6e';
       g.beginPath();g.moveTo(GX0,668);g.lineTo(lerp(GX0,GX1,k),668);glowStroke(c,3)}
-  }else{ // menus: idle magazine
-    const bob=st.mode==='title'?1:.5;
-    for(let j=0;j<8;j++)drawShell(100+j*73,578+Math.sin(t*2+j)*4*bob,42,98,j<4?'live':'blank',st.mode==='title'?.6:.25,st.mode==='title'?1:.35)}
+  }else if(st.mode==='title')titleScene(t);
+  else{ // menus: idle magazine
+    for(let j=0;j<8;j++)drawShell(CX-256+j*73,578+Math.sin(t*2+j)*2,42,98,j<4?'live':'blank',.25,.35)}
   if(theme&&theme.pulse&&t>=theme.pulse&&t-theme.pulse<.05&&st.mode==='title'){const l=$('logo');l.classList.remove('pulse');void l.offsetWidth;l.classList.add('pulse');theme.pulse=0}
   if(st.mode==='title')$('press').style.visibility=(performance.now()/1000%1)<.6?'visible':'hidden';
   const fl=opt.flash?1:.3,fa=Math.max(0,1-(t-st.flashT)/.45),fe=$('flash');fe.style.background=st.flashCol;fe.style.opacity=fa*(st.flashCol.includes('255,60,90')?fl:1);

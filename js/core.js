@@ -2,9 +2,14 @@
 "use strict";
 // ---------- layout ----------
 const stage=document.getElementById('stage');
-function fit(){const s=Math.min(innerWidth/720,innerHeight/1280);stage.style.transform=`translate(-50%,-50%) scale(${s})`;stage.dataset.s=s}
-addEventListener('resize',fit);fit();
 const cv=document.getElementById('cv');let g=cv.getContext('2d');
+// portrait: the 720x1280 reel frame. Wide screens: same height, the stage widens to the screen and the scope stretches with it
+let SW=720,CX=360,WIDE=false;
+function fit(){WIDE=innerWidth/innerHeight>.8;SW=WIDE?Math.min(2560,Math.max(720,Math.round(1280*innerWidth/innerHeight))):720;CX=SW/2;
+  const half=WIDE?Math.min(SW/2-170,900):280;GX0=CX-half;GX1=CX+half;GXT=WIDE?CX:355;
+  stage.style.width=SW+'px';if(cv.width!==SW){cv.width=SW;cv.style.width=SW+'px'}document.body.classList.toggle('wide',WIDE);
+  const s=Math.min(innerWidth/SW,innerHeight/1280);stage.style.transform=`translate(-50%,-50%) scale(${s})`;stage.dataset.s=s}
+addEventListener('resize',fit);
 const $=id=>document.getElementById(id);
 // draw into another 2D context (menu/how-to vignettes) with the same helpers
 function onCtx(c,fn){const old=g;g=c;try{return fn()}finally{g=old}}
@@ -28,7 +33,8 @@ const INTRO=6;                          // 3 bars
 const fq=p=>F3*Math.pow(2,(p+G.key)/12);   // G.key: transposition in semitones (Survival key change)
 
 // graph geometry
-const GX0=75, GXT=355, GX1=635, GY0=488, GY1=806;
+let GX0=80, GXT=355, GX1=640;const GY0=488, GY1=806;
+fit();
 const X=s=>s<=PRE?GX0+(GXT-GX0)*s/PRE:GXT+(GX1-GXT)*(s-PRE)/POST;
 const Y=p=>Math.max(GY0,Math.min(GY1,639-71*(p+G.key)/12));
 const COL={y:'#ffd84a',r:'#ff3d6e',c:'#7ef2ff',g:'#9aa79f',v:'#b06cff'};
