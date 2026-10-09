@@ -44,8 +44,8 @@ function drums(t0,phase,res){
     for(let s=24;s<PRE;s++)V.hat(t0+s*SD,.35+(s-24)*.06);
     V.riser(t0+20*SD,12*SD);
   }else if(res){
-    for(let s=PRE;s<PRE+POST;s++){const t=t0+s*SD;
-      if(s%4===0)V.kick(t,.85);if(s%8===4)V.clap(t,.7);V.hat(t,s%2?.75:.45)}
+    for(let s=PRE;s<PRE+POST;s+=2){const t=t0+s*SD;
+      if(s%4===0)V.kick(t,.85);if(s%8===4)V.clap(t,.7);V.hat(t,s%4===2?.55:.35)}
   }else{
     for(let s=PRE;s<PRE+POST;s+=8)V.kick(t0+s*SD,.65);
     for(let s=PRE;s<PRE+POST;s+=2)if(s%8===6)V.hat(t0+s*SD,.35);

@@ -24,9 +24,11 @@ function initAudio(){
   }
   out.connect(ctx.destination);
   // hall reverb
-  rev=ctx.createConvolver();const len=ctx.sampleRate*3.2,ir=ctx.createBuffer(2,len,ctx.sampleRate);
-  for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6)*(i<ctx.sampleRate*.01?i/(ctx.sampleRate*.01):1)}
-  rev.buffer=ir;revSend=ctx.createGain();revSend.gain.value=.5;const rlp=ctx.createBiquadFilter();rlp.type='lowpass';rlp.frequency.value=6000;
+  rev=ctx.createConvolver();
+  const revLen=Math.round(ctx.sampleRate*(IS_MOBILE?0.8:2.4)),irCh=IS_MOBILE?1:2;
+  const ir=ctx.createBuffer(irCh,revLen,ctx.sampleRate);
+  for(let c=0;c<irCh;c++){const d=ir.getChannelData(c);for(let i=0;i<revLen;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/revLen,2.6)*(i<ctx.sampleRate*.01?i/(ctx.sampleRate*.01):1)}
+  rev.buffer=ir;revSend=ctx.createGain();revSend.gain.value=IS_MOBILE?.35:.5;const rlp=ctx.createBiquadFilter();rlp.type='lowpass';rlp.frequency.value=IS_MOBILE?5000:6000;
   revSend.connect(rlp);rlp.connect(rev);rev.connect(bus);
   // dotted-eighth echo
   dly=ctx.createDelay(1);dly.delayTime.value=SD*3;const fb=ctx.createGain();fb.gain.value=.32;const dlp=ctx.createBiquadFilter();dlp.type='lowpass';dlp.frequency.value=2800;
@@ -55,12 +57,18 @@ function filt(type,f,q=.7){const b=ctx.createBiquadFilter();b.type=type;b.freque
 const V={
   // bright detuned saw lead + octave-down sub, plucked short (the reel's pre-trigger riff)
   lead(t,p,d,gn=1){const f=fq(p),len=Math.min(d,.2),gg=ctx.createGain(),lp=filt('lowpass',7000,.8);
-    lp.frequency.setValueAtTime(15000,t);lp.frequency.exponentialRampToValueAtTime(7000,t+len+.1);
-    for(const det of[-9,0,9]){const o=osc('sawtooth',f,t,len+.15);o.detune.value=det;o.connect(lp)}
-    const hi=osc('sawtooth',f*2,t,len+.15),hg=ctx.createGain();hg.gain.value=.22;hi.connect(hg);hg.connect(lp);
-    const sub=osc('square',f/2,t,len+.15),sg=ctx.createGain();sg.gain.value=.3;sub.connect(sg);sg.connect(lp);
+    lp.frequency.setValueAtTime(14000,t);lp.frequency.exponentialRampToValueAtTime(6500,t+len+.08);
+    if(IS_MOBILE){
+      const o=osc('sawtooth',f,t,len+.12);o.connect(lp);
+      const sub=osc('square',f/2,t,len+.12),sg=ctx.createGain();sg.gain.value=.25;sub.connect(sg);sg.connect(lp);
+    }else{
+      for(const det of[-9,0,9]){const o=osc('sawtooth',f,t,len+.15);o.detune.value=det;o.connect(lp)}
+      const hi=osc('sawtooth',f*2,t,len+.15),hg=ctx.createGain();hg.gain.value=.22;hi.connect(hg);hg.connect(lp);
+      const sub=osc('square',f/2,t,len+.15),sg=ctx.createGain();sg.gain.value=.3;sub.connect(sg);sg.connect(lp);
+    }
     lp.connect(gg);const p_=gg.gain;p_.setValueAtTime(0,t);p_.linearRampToValueAtTime(.09*gn,t+.003);
-    p_.setTargetAtTime(.06*gn,t+.01,.06);p_.setValueAtTime(.06*gn,t+len);p_.linearRampToValueAtTime(0,t+len+.04);out(gg,.12,.16)},
+    p_.setTargetAtTime(.06*gn,t+.01,.06);p_.setValueAtTime(.06*gn,t+len);p_.linearRampToValueAtTime(0,t+len+.04);
+    out(gg,IS_MOBILE?.08:.12,IS_MOBILE?.08:.16)},
   // distorted 808 bass: pitch-dropping sine into hard saturation
   k808(t,p,d,gn=1){const f=fq(p),len=Math.max(.18,d),o=ctx.createOscillator();o.type='sine';
     o.frequency.setValueAtTime(f*2.2,t);o.frequency.exponentialRampToValueAtTime(f,t+.045);o.start(t);o.stop(t+len+.1);
@@ -86,10 +94,14 @@ const V={
   pad(t,deg,d,gn=1){const lp=filt('lowpass',1500,.6),gg=ctx.createGain();lp.connect(gg);
     lp.frequency.setValueAtTime(1800,t);lp.frequency.linearRampToValueAtTime(3200,t+d*.6);
     const root=semis(fitOct(deg,0,6));
-    for(const iv of[0,semis(deg+2)-semis(deg),semis(deg+4)-semis(deg)])for(const det of[-14,0,14]){const o=osc('sawtooth',fq(root+iv),t,d+.4);o.detune.value=det;o.connect(lp)}
-    gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(.05*gn,t+.06);gg.gain.setValueAtTime(.05*gn,t+d-.05);gg.gain.linearRampToValueAtTime(0,t+d+.3);out(gg,.45);
+    if(IS_MOBILE){
+      for(const iv of[0,semis(deg+2)-semis(deg),semis(deg+4)-semis(deg)]){const o=osc('sawtooth',fq(root+iv),t,d+.35);o.connect(lp)}
+    }else{
+      for(const iv of[0,semis(deg+2)-semis(deg),semis(deg+4)-semis(deg)])for(const det of[-14,0,14]){const o=osc('sawtooth',fq(root+iv),t,d+.4);o.detune.value=det;o.connect(lp)}
+    }
+    gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(.06*gn,t+.06);gg.gain.setValueAtTime(.06*gn,t+d-.05);gg.gain.linearRampToValueAtTime(0,t+d+.3);out(gg,.35);
     const sb=osc('sine',fq(root-24),t,d+.1),sg=ctx.createGain();sb.connect(sg);
-    sg.gain.setValueAtTime(0,t);sg.gain.linearRampToValueAtTime(.17*gn,t+.03);sg.gain.setValueAtTime(.17*gn,t+d-.04);sg.gain.linearRampToValueAtTime(0,t+d+.05);out(sg)},
+    sg.gain.setValueAtTime(0,t);sg.gain.linearRampToValueAtTime(.18*gn,t+.03);sg.gain.setValueAtTime(.18*gn,t+d-.04);sg.gain.linearRampToValueAtTime(0,t+d+.05);out(sg)},
   sawwall(t,d,deg=0){const lp=filt('lowpass',300,1);lp.frequency.setValueAtTime(300,t);lp.frequency.exponentialRampToValueAtTime(3000,t+d);
     const gg=ctx.createGain();lp.connect(gg);gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(.045,t+.3);gg.gain.setValueAtTime(.045,t+d-.2);gg.gain.linearRampToValueAtTime(0,t+d);out(gg,.3);
     const r=semis(fitOct(deg,0,6));for(const iv of[-24,-12,-5,0,semis(deg+2)-semis(deg),7])for(const det of[-12,0,12]){const o=osc('sawtooth',fq(r+iv),t,d);o.detune.value=det;o.connect(lp)}},

@@ -89,8 +89,7 @@ let menuIdx=Math.max(0,MODE_KEYS.indexOf((store.get('last',{})||{}).mode));
 function titleRender(){
   const hi=table('classic')[0],last=store.get('last',{})||{};
   $('t1up').textContent='1UP '+String(last.s||0).padStart(6,'0');$('tHi').textContent=String(hi?hi.s:0).padStart(6,'0');
-  $('tCred').textContent=ctx?'01':'00';
-  $('tMarqTxt').textContent=MODE_KEYS.map(m=>{const e=table(m)[0];return`${MODES[m].name} 1ST ${e?e.n+' '+fmtD(e.s):'—'}`}).join('   ·   ')}
+  $('tCred').textContent=ctx?'01':'00';}
 function goTitle(){initAudio();if(ctx&&ctx.state!=='running')ctx.resume();st.mode='title';show('scrTitle');if(!theme)themeStart();themeMuffle(18000);titleRender();hideGame()}
 function goMenu(){initAudio();ctx.resume();uiLock=performance.now()+400;if(st.mode==='title')V.rack(now());
   st.mode='menu';show('scrMenu');themeStart();themeMuffle(2600);menuRender();hideGame()}
@@ -167,8 +166,7 @@ function counts(){const n=G.mag.length,i=st.i,L=G.mag.slice(i).reduce((a,b)=>a+b
 function startShell(i,t0,who='you'){
   st.mode='play';st.i=i;st.t0=t0;st.rev=false;st.guess=null;st.who=who;st.locked=0;st.gamma=1;st.lastPay=0;
   const res=G.mag[i];st.pre=layers(i,'pre',null,who);st.post=layers(i,'post',res);
-  routeTo(run.route,()=>{schedule(st.pre,t0);schedule(st.post,t0);drums(t0,'pre');drums(t0,'post',res);
-    const tt=t0+PRE*SD;if(res)V.gunshot(tt);else V.dryfire(tt);V.clink(tt)});
+  routeTo(run.route,()=>{schedule(st.pre,t0);drums(t0,'pre')});
   run.cpuStep=who==='dlr'?8+rnd(17):null;run.cpuCall=null;
   run.lam=run.mode==='survival'?Math.max(16,(run.k<=3?32:run.k<=5?28:run.k<=7?24:20)):32;
   $('ctrl').style.display='flex';
@@ -199,6 +197,10 @@ function payOf(v){const{L,left}=counts(),K=v?L:left-L;return K?{w:left/K,K}:{w:0
 function fx(kind){const e=$('mA');e.classList.remove('hurt','heal');void e.offsetWidth;e.classList.add(kind)}
 function reveal(){
   st.rev=true;const i=st.i,res=G.mag[i],n=G.mag.length,v=st.guess,M=Math.min(8,1+run.streak),m=run.mode;
+  routeTo(run.route,()=>{
+    schedule(st.post,st.t0);drums(st.t0,'post',res);
+    const tt=st.t0+PRE*SD;if(res)V.gunshot(tt);else V.dryfire(tt);V.clink(tt);
+  });
   const fl=opt.flash?1:.3;st.flashT=now();st.flashCol=res?`rgba(255,190,200,${.75*fl})`:`rgba(170,215,240,${.6*fl})`;
   if(res){st.shakeT=now();st.shakeAmp=22*(.6+.1*M)*(opt.shake?1:0)}
   const{w}=v===null?{w:0}:payOf(v),ok=v!==null&&v===res,dlrTurn=m==='duel'&&st.who==='dlr';
