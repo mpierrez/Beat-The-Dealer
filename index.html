@@ -83,7 +83,7 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Barlow 
 .foot{position:absolute;top:1232px;left:0;right:0;font-size:16px;color:#6f8578;letter-spacing:1px}
 /* menu */
 #scrMenu{justify-content:flex-start;padding-top:56px}
-#card{position:relative;width:560px;height:660px;margin-top:10px;border:3px solid var(--mc);border-radius:18px;background:rgba(3,6,4,.85);box-shadow:0 0 30px color-mix(in srgb,var(--mc) 40%,transparent);
+#card{position:relative;width:560px;height:600px;margin-top:10px;border:3px solid var(--mc);border-radius:18px;background:rgba(3,6,4,.85);box-shadow:0 0 30px color-mix(in srgb,var(--mc) 40%,transparent);
   display:flex;flex-direction:column;align-items:center;padding:34px 30px;gap:14px;cursor:pointer;transition:transform .12s}
 #card.slide{transform:translateX(var(--dx))}
 #cName{font-family:"Open Sans",sans-serif;font-weight:800;font-size:58px;color:var(--mc);text-shadow:0 0 20px color-mix(in srgb,var(--mc) 60%,transparent)}
@@ -97,6 +97,8 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Barlow 
 #mPrev{left:8px}#mNext{right:8px}
 #dots{display:flex;gap:14px;margin-top:4px}#dots i{width:12px;height:12px;border-radius:50%;background:#3c4d44}#dots i.on{background:var(--mc)}
 #mRow{display:flex;gap:16px}
+#mDiff{display:flex;align-items:center;gap:18px}#dVal{font-weight:700;font-size:34px;letter-spacing:3px}#dDesc{font-size:17px;color:var(--dim);width:420px}
+.arr2{width:56px;height:56px;font-size:30px;background:transparent;border:2px solid #9fb7a6;border-radius:12px;color:#dfe8e2;cursor:pointer}
 /* how to */
 #scrHow ol{text-align:left;max-width:600px;font-size:23px;color:#cfd8d2;line-height:1.4;padding-left:28px}
 #scrHow li{margin:6px 0}
@@ -157,9 +159,10 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Barlow 
       <div id="cRules"></div><div id="cBest"></div><div id="cPb"></div><div id="cChip"></div></div>
     <button class="arr" id="mPrev" aria-label="Previous">◀</button><button class="arr" id="mNext" aria-label="Next">▶</button>
     <div id="dots"></div>
+    <div id="mDiff"><button class="arr2" id="dPrev" aria-label="Easier">◀</button><div><div id="dVal"></div><div id="dDesc"></div></div><button class="arr2" id="dNext" aria-label="Harder">▶</button></div>
     <button class="pbtn" id="mPlay">PLAY</button>
     <div id="mRow"><button class="pbtn sec" id="mHof">HALL OF FAME</button><button class="pbtn sec" id="mHow">HOW TO PLAY</button></div>
-    <div class="keys">← → TABLE · ENTER PLAY · H HALL OF FAME · ESC BACK</div>
+    <div class="keys">← → TABLE · ↑ ↓ DIFFICULTY · ENTER PLAY · H HALL OF FAME · ESC BACK</div>
   </section>
 
   <section class="panel hide" id="scrHow">
@@ -217,6 +220,10 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Barlow 
     <div class="keys" id="pNote"></div>
   </section>
 
+  <svg width="0" height="0" style="position:absolute"><filter id="rgbx" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0" result="r"/><feOffset in="r" id="rgbR" dx="0" dy="0" result="r2"/>
+    <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0" result="c"/><feOffset in="c" id="rgbC" dx="0" dy="0" result="c2"/>
+    <feBlend in="r2" in2="c2" mode="screen"/></filter></svg>
   <canvas id="grain" width="180" height="320"></canvas>
   <div id="scan"></div><div id="vig"></div><div id="flash"></div>
 </div>
@@ -292,26 +299,34 @@ const GEN={
     const n=[];for(let b=0;b<2;b++){const r=fitOct(pr[b],0,5);for(let k=0;k<8;k++)n.push({s:b*16+k*2,d:2,deg:r+m[k%4]})}
     n[15].deg=fitOct(pr[1],0,5)+pick([0,4]);
     return{n,m1:`\\text{loop} = (${m.join(',\\,')})\\;\\;\\text{scale steps}`,
-      m2:`4\\text{ notes}\\times 4\\;\\text{ over }\\;${chordTex(pr[0])}\\to ${chordTex(pr[1])}`,cap:'same 4 notes, new chord: it still fits'}},
+      m2:`4\\text{ notes}\\times 4\\;\\text{ over }\\;${chordTex(pr[0])}\\to ${chordTex(pr[1])}`,cap:'same 4 notes, new chord: it still fits',
+      e1:`\\text{same 4 notes: } (${m.join(',\\,')})\\text{, 4 times}`,e2:`${chordTex(pr[0])}\\text{ then }${chordTex(pr[1])}`,
+      h1:`y_n = r_{\\lfloor n/8\\rfloor} + m_{\\,n \\bmod 4},\\quad m=(${m.join(',')})`,h2:`r_0 = ${chordTex(pr[0])},\\;\\; r_1 = ${chordTex(pr[1])},\\;\\; y_{15} \\in r_1`}},
   arp(pr){
     const shapes={up:[0,1,2,3],down:[3,2,1,0],'up-down':[0,1,2,3,2,1],broken:[0,2,1,3],pendulum:[0,2,1,2]};
     const name=pick(Object.keys(shapes)),sh=shapes[name],n=[];
     for(let b=0;b<2;b++){const r=fitOct(pr[b],0,4),T=[r,r+2,r+4,r+7];for(let k=0;k<8;k++)n.push({s:b*16+k*2,d:2,deg:T[sh[(b*8+k)%sh.length]]})}
     return{n,m1:`\\text{arp}_{\\text{${name}}}:\\;\\; ${chordTex(pr[0])}\\to ${chordTex(pr[1])}`,
-      m2:`\\text{chord tones only: } 1,\\,3,\\,5,\\,8`,cap:"only chord tones: it can't sound wrong"}},
+      m2:`\\text{chord tones only: } 1,\\,3,\\,5,\\,8`,cap:"only chord tones: it can't sound wrong",
+      e1:`\\text{only the chord's notes: } 1,\\,3,\\,5,\\,8`,e2:`${chordTex(pr[0])}\\text{ then }${chordTex(pr[1])}`,
+      h1:`y_n = c_{\\lfloor n/8\\rfloor} + T_{\\sigma(n \\bmod ${sh.length})},\\quad T=(0,2,4,7)`,h2:`\\sigma = (${sh.join(',')})`}},
   pedal(pr){
     const n=[];let l=null;
     for(let b=0;b<2;b++){const r=fitOct(pr[b],-1,3);l=l===null?r+4:fitOct(l,r+2,r+8);
       for(let k=0;k<8;k++){if(k%2===0)n.push({s:b*16+k*2,d:2,deg:r});else{n.push({s:b*16+k*2,d:2,deg:l});l+=pick([-1,1,1,2,-2]);l=Math.max(r+2,Math.min(r+9,l))}}}
     return{n,m1:`y_{2k} = ${chordTex(pr[0]).replace('m','')},\\qquad y_{2k+1} = y_{2k-1}\\pm 1`,
-      m2:`\\text{a pedal note under a moving line}`,cap:'one note keeps coming back: the pedal'}},
+      m2:`\\text{a pedal note under a moving line}`,cap:'one note keeps coming back: the pedal',
+      e1:`\\text{one note, another note, the first one again}`,e2:`\\text{the low note keeps coming back}`,
+      h1:`y_{2k}=r,\\quad y_{2k+1}=y_{2k-1}+\\epsilon_k,\\;\\; \\epsilon_k\\in\\{\\pm1,\\pm2\\}`,h2:`r \\in \\{${chordTex(pr[0])},\\,${chordTex(pr[1])}\\}`}},
   run(pr){
     const up=R()<.6,n=[];
     for(let b=0;b<2;b++){const r=fitOct(pr[b],0,4);const shape=up?[0,1,2,3,4,3,2,1]:[7,6,5,4,3,4,5,6];
       for(let k=0;k<8;k++)n.push({s:b*16+k*2,d:2,deg:r+shape[k]})}
     n[15].deg=fitOct(pr[1],0,4)+(up?0:4);
     return{n,m1:`y_{n+1} = y_n ${up?'+':'-'} 1\\quad\\text{(one scale step)}`,
-      m2:`\\text{${up?'up':'down'} the scale of }${chordTex(pr[0])},\\text{ then }${chordTex(pr[1])}`,cap:'walk the scale, one step at a time'}},
+      m2:`\\text{${up?'up':'down'} the scale of }${chordTex(pr[0])},\\text{ then }${chordTex(pr[1])}`,cap:'walk the scale, one step at a time',
+      e1:`\\text{${up?'up':'down'} the scale, one step at a time}`,e2:`${chordTex(pr[0])}\\text{ then }${chordTex(pr[1])}`,
+      h1:`y_n = r + ${up?'4-':'3+'}\\lvert (n \\bmod 8) - 4\\rvert`,h2:`r \\in \\{${chordTex(pr[0])},\\,${chordTex(pr[1])}\\}`}},
   sync(pr){
     const pats=[{h:[0,3,6,8,11,14],t:'3+3+2+3+3+2',c:'3 + 3 + 2: the groove under half of pop music'},
                 {h:[0,3,6,10,12],t:'3+3+4+2+4',c:'off the grid on purpose: syncopation'},
@@ -319,16 +334,22 @@ const GEN={
     const P=pick(pats),n=[];
     for(let b=0;b<2;b++){const r=fitOct(pr[b],0,4),pool=[r,r+7,r+4,r+2,r+4];
       P.h.forEach((h,i)=>{const nx=P.h[i+1]??16;n.push({s:b*16+h,d:Math.min(nx-h,2)*.8,deg:i===0?r:pick(pool)})})}
-    return{n,dash:1,m1:`\\text{hits} = \\{${P.h.join(',')}\\}\\subset\\mathbb{Z}_{16}`,m2:`${P.t} = 16\\text{ sixteenths}`,cap:P.c}},
+    return{n,dash:1,m1:`\\text{hits} = \\{${P.h.join(',')}\\}\\subset\\mathbb{Z}_{16}`,m2:`${P.t} = 16\\text{ sixteenths}`,cap:P.c,
+      e1:`\\text{notes between the beats}`,e2:`${P.h.length}\\text{ hits per bar}`,
+      h1:`y_k = \\mathbf{1}[\\,k \\bmod 16 \\in H\\,]\\cdot c_k,\\quad \\lvert H\\rvert = ${P.h.length}`,h2:`H=\\{${P.h.join(',')}\\}`}},
   call(pr){
     const r=fitOct(pr[0],0,4),r2=fitOct(pr[1],0,4),top=pick([5,6,7]);
     const n=[{s:0,d:2,deg:r},{s:2,d:2,deg:r+2},{s:4,d:2,deg:r+4},{s:6,d:6,deg:r+top},{s:12,d:2,deg:r+4},{s:14,d:2,deg:r+2},
              {s:16,d:2,deg:r2+4},{s:18,d:2,deg:r2+3},{s:20,d:2,deg:r2+2},{s:22,d:6,deg:r2+1},{s:28,d:4,deg:r2}];
-    return{n,m1:`\\text{bar 2} = \\text{answer}(\\text{bar 1})`,m2:`\\text{rises on }${chordTex(pr[0])}\\text{, lands on }${chordTex(pr[1])}`,cap:'question, then answer'}},
+    return{n,m1:`\\text{bar 2} = \\text{answer}(\\text{bar 1})`,m2:`\\text{rises on }${chordTex(pr[0])}\\text{, lands on }${chordTex(pr[1])}`,cap:'question, then answer',
+      e1:`\\text{bar 1 asks, bar 2 answers}`,e2:`\\text{up on }${chordTex(pr[0])}\\text{, down to }${chordTex(pr[1])}`,
+      h1:`y^{(2)}_n = r_2 + 4 - n,\\;\\; n = 0..4`,h2:`y^{(1)} \\nearrow\\;\\; y^{(2)} \\searrow ${chordTex(pr[1])}`}},
   long(pr){
     const r=fitOct(pr[0],0,4),r2=fitOct(pr[1],0,4),df=(1+rnd(30)/10).toFixed(1);
     const n=[{s:0,d:12,deg:r},{s:13,d:3,deg:r+pick([1,2])},{s:16,d:10,deg:r2},{s:27,d:5,deg:r2+pick([1,2,4])}];
-    return{n,reese:1,m1:`y=\\text{saw}(ft)+\\text{saw}\\big((f+${df})\\,t\\big)`,m2:`\\text{long notes: }${chordTex(pr[0])}\\to ${chordTex(pr[1])}`,cap:'two saws a few Hz apart beat against each other'}},
+    return{n,reese:1,m1:`y=\\text{saw}(ft)+\\text{saw}\\big((f+${df})\\,t\\big)`,m2:`\\text{long notes: }${chordTex(pr[0])}\\to ${chordTex(pr[1])}`,cap:'two saws a few Hz apart beat against each other',
+      e1:`\\text{two long notes that wobble}`,e2:`${chordTex(pr[0])}\\to ${chordTex(pr[1])}`,
+      h1:`y=\\text{saw}(ft)+\\text{saw}\\big((f+${df})\\,t\\big)`,h2:`\\text{envelope} \\propto \\lvert\\cos(\\pi\\cdot ${df}\\, t)\\rvert`}},
 };
 function finishRiff(r){
   r.n.forEach(x=>{x.p=semis(x.deg);x.lab=((x.deg%7)+7)%7+1});
@@ -571,6 +592,13 @@ const MODES={
     rules:['Same magazine for everyone today.','One ranked attempt, then practice.']},
 };
 const MODE_KEYS=['classic','survival','duel','daily'];
+// difficulty: EASY = plain-words formulas, P(LIVE) in %, wider beat window; HARD = dense formulas, P(LIVE) hidden (count yourself)
+const DIFFS={easy:{name:'EASY',col:'#6dffa0',k:.75,win:.12,blunder:[.4,.25,.12],lamD:0,desc:'Plain formulas. Odds in %. Wide beat window. Score ×0.75'},
+  normal:{name:'NORMAL',col:'#f6d342',k:1,win:.07,blunder:[.25,.12,0],lamD:0,desc:'The reel. Score ×1'},
+  hard:{name:'HARD',col:'#ff3d6e',k:1.5,win:.05,blunder:[.08,0,0],lamD:4,desc:'Dense formulas. P(LIVE) hidden: count. Score ×1.5'}};
+const DIFF_KEYS=['easy','normal','hard'];let DIFF=DIFF_KEYS.includes(store.get('diff','normal'))?store.get('diff','normal'):'normal';
+const D=()=>DIFFS[(run&&run.diff)||DIFF];
+function setDiff(d){DIFF=DIFF_KEYS[(DIFF_KEYS.indexOf(DIFF)+d+3)%3];store.set('diff',DIFF);if(ctx)V.tick(now(),1);menuRender()}
 const MODS=[{name:'STANDARD',n:8,L:4,d:'4 live, 4 blank.'},{name:'HEAVY LOAD',n:8,L:6,d:'6 live, 2 blank.'},
             {name:'DRY SPELL',n:8,L:2,d:'2 live, 6 blank.'},{name:'TEN-GAUGE',n:10,L:5,d:'10 shells, 5 live.'}];
 const today=()=>{const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
@@ -640,6 +668,7 @@ function menuRender(){
   $('cRules').innerHTML=rules.map(r=>`<div>${r}</div>`).join('');
   const best=table(k)[0];$('cBest').textContent=best?`BEST   ${best.n}   ${fmtD(best.s)}`:'BEST   —';
   const pb=(store.get('pb',{})||{})[k];$('cPb').textContent=`YOUR BEST ${pb?fmtD(pb):'—'}`;$('cChip').textContent=chip;
+  const Dd=DIFFS[DIFF];$('dVal').textContent='DIFFICULTY: '+Dd.name;$('dVal').style.color=Dd.col;$('dDesc').textContent=Dd.desc;
   $('dots').innerHTML=MODE_KEYS.map((_,j)=>`<i class="${j===menuIdx?'on':''}"></i>`).join('');
   onCtx($('cVig').getContext('2d'),()=>{g.clearRect(0,0,480,200);
     if(k==='classic')for(let j=0;j<8;j++)drawShell(240+(j-3.5)*54,40,36,100,j<4?'live':'blank',.5);
@@ -678,7 +707,7 @@ function startRun(mode){
   const tb=now()+.15;themeStop(tb);
   if(run)killRoute(run.route);
   const date=today();
-  run={mode,route:mkRoute(bus),date,sigma:0,shown:0,streak:0,bestM:1,correct:0,calls:0,shells:0,onBeat:0,maxW:0,late:0,
+  run={mode,diff:DIFF,route:mkRoute(bus),date,sigma:0,shown:0,streak:0,bestM:1,correct:0,calls:0,shells:0,onBeat:0,maxW:0,late:0,
     hp:3,hpMax:5,k:1,magOk:true,stage:1,H:2,hpD:2,nextWho:'you',hits:0,extra:0,stageHurt:false,won:false,perfect:0,lam:32,
     ranked:false,practice:false,mod:null,qual:false,cpuStep:null,cpuCall:null,segT0:0,stageCard:false};
   const last=store.get('last',{})||{};last.mode=mode;store.set('last',last);
@@ -694,8 +723,8 @@ function startRun(mode){
   const t=st.introT0,b=SD*4;
   routeTo(run.route,()=>{
     for(let k=0;k<9;k++){V.kick(t+k*b,k%4===0?1:.8);V.kick(t+k*b+b/2,.3)}
-    for(let j=0,n=G.mag.length;j<n;j++)V.clink(t+dropAt(INTRO_PLAN,j,n)+.16);   // shells landing
-    for(let k=0;k<12;k++)V.tick(t+1.25+k*SD*.5,1);
+    for(let k=0;k<5;k++)V.tick(t+.5+k*.06,.8);                                // rattle
+    for(let j=0,n=G.mag.length;j<n;j++){V.tick(t+loadAt(j),.7);V.clink(t+loadAt(j)+LOADD)}   // loaded one by one
     V.pad(t+2.5,0,1.95,1.2);V.riser(t+3.5,1);V.gunshot(t+4.5)});
   hud();
 }
@@ -706,7 +735,7 @@ function startShell(i,t0,who='you'){
   routeTo(run.route,()=>{schedule(st.pre,t0);schedule(st.post,t0);drums(t0,'pre');drums(t0,'post',res);
     const tt=t0+PRE*SD;if(res)V.gunshot(tt);else V.dryfire(tt);V.clink(tt)});
   run.cpuStep=who==='dlr'?8+rnd(17):null;run.cpuCall=null;
-  run.lam=run.mode==='survival'?(run.k<=3?32:run.k<=5?28:run.k<=7?24:20):32;
+  run.lam=run.mode==='survival'?Math.max(16,(run.k<=3?32:run.k<=5?28:run.k<=7?24:20)-(run.k>1?D().lamD:0)):32;
   $('ctrl').style.display='flex';
   for(const id of['bL','bB']){const b=$(id);b.disabled=false;b.className='btn '+(id==='bL'?'live':'blank')+(who==='dlr'?' call':'')}
   hud();
@@ -716,7 +745,7 @@ function call(v){
   const step=(now()-st.t0)/SD;if(step<0||step>=run.lam)return;
   st.guess=v;
   const tp=now()-(ctx.outputLatency||ctx.baseLatency||0),pos=(tp-st.t0)/SD,r=((pos%4)+4)%4,dl=Math.min(r,4-r)*SD;
-  st.gamma=dl<=.07?1.25:1;
+  st.gamma=dl<=D().win?1.25:1;
   const me=$(v?'bL':'bB'),ot=$(v?'bB':'bL');me.classList.add('on');ot.classList.add('off');
   for(const b of[me,ot])b.disabled=true;
   if(st.gamma>1){V.rim(now());me.classList.add('gold');setTimeout(()=>me.classList.remove('gold'),160)}else V.tick(now(),1.5);
@@ -726,7 +755,7 @@ function lockButtons(){for(const id of['bL','bB']){const b=$(id);b.disabled=true
 function cpuDecide(){
   const{L,left}=counts(),P=L/left;
   let c=P===1?1:P===0?0:P>.5?1:P<.5?0:(Math.random()<.5?1:0);
-  if(P>0&&P<1&&Math.random()<[.25,.12,0][run.stage-1])c=Math.random()<.5?1:0;
+  if(P>0&&P<1&&Math.random()<D().blunder[run.stage-1])c=Math.random()<.5?1:0;
   run.cpuCall=c;run.cpuAt=(now()-st.t0)/SD;V.tick(now(),1);
 }
 function payOf(v){const{L,left}=counts(),K=v?L:left-L;return K?{w:left/K,K}:{w:0,K:0}}
@@ -734,11 +763,11 @@ function fx(kind){const e=$('mA');e.classList.remove('hurt','heal');void e.offse
 function reveal(){
   st.rev=true;const i=st.i,res=G.mag[i],n=G.mag.length,v=st.guess,M=Math.min(8,1+run.streak),m=run.mode;
   const fl=opt.flash?1:.3;st.flashT=now();st.flashCol=res?`rgba(255,190,200,${.75*fl})`:`rgba(170,215,240,${.6*fl})`;
-  if(res){st.shakeT=now();st.shakeAmp=22*(.6+.1*M)}
+  if(res){st.shakeT=now();st.shakeAmp=22*(.6+.1*M)*(opt.shake?1:0)}
   const{w}=v===null?{w:0}:payOf(v),ok=v!==null&&v===res,dlrTurn=m==='duel'&&st.who==='dlr';
   st.lastM=M;st.lastPay=0;
   if(v!==null)run.calls++;
-  if(ok){const pay=Math.round(100*w*st.gamma*M);st.lastPay=pay;run.sigma+=pay;run.streak++;run.correct++;run.maxW=Math.max(run.maxW,w);
+  if(ok){const pay=Math.round(100*w*st.gamma*M*D().k);st.lastPay=pay;run.sigma+=pay;run.streak++;run.correct++;run.maxW=Math.max(run.maxW,w);
     if(st.gamma>1)run.onBeat++;run.bestM=Math.max(run.bestM,Math.min(8,1+run.streak))}
   else if(!(dlrTurn&&v===null))run.streak=0;
   if(v===null&&!dlrTurn)run.late++;
@@ -801,7 +830,8 @@ function quip(){const m=run.mode,c=run.correct,n=G.mag.length;
   if(m==='survival'){const k=run.k;return k>=10?'THE DEALER RAN OUT OF SHELLS.':k>=7?'THE DEALER IS SWEATING.':k>=4?'THE DEALER RELOADS.':'THE DEALER WINS.'}
   if(m==='duel')return run.won?'YOU BEAT THE DEALER. HE WANTS A REMATCH.':'THE DEALER WILL SEE YOU AGAIN.';
   return c===n?'YOU BEAT THE DEALER.':c>=.75*n?'THE DEALER IS SWEATING.':c>=.5*n?'COIN FLIP ENERGY.':'THE DEALER WINS.'}
-function detail(){const m=run.mode;
+function detail(){return detail0()+(run.diff!=='normal'?' '+DIFFS[run.diff].name[0]:'')}
+function detail0(){const m=run.mode;
   if(m==='survival')return`MAG ${run.k}`;
   if(m==='duel')return roman(run.stage)+(run.won?' ★':'');
   return`${run.correct}/${G.mag.length} ×${run.bestM}`}
@@ -812,7 +842,7 @@ function endRun(){
   const last=store.get('last',{})||{};last.s=run.sigma;store.set('last',last);
   if(m==='daily'){const log=store.get('daily.log',{})||{};if(run.ranked&&log[run.date]){Object.assign(log[run.date],{done:1,s:run.sigma,mod:run.mod.name});store.set('daily.log',log)}}
   run.qual=!run.practice&&qualifies(m,run.date,run.sigma);
-  $('rMode').textContent=MODES[m].name+(m==='daily'?` · ${run.date} · ${run.mod.name}${run.practice?' · PRACTICE':''}`:'');
+  $('rMode').textContent=MODES[m].name+' · '+DIFFS[run.diff].name+(m==='daily'?` · ${run.date} · ${run.mod.name}${run.practice?' · PRACTICE':''}`:'');
   $('rScore').textContent=fmtD(run.sigma);
   const gr=grade(),gc={S:'#ffd84a',A:'#e8195a',B:'#7ef2ff',C:'#f4f4f2',D:'#6f8578'}[gr];
   const ge=$('rGrade');ge.textContent=gr;ge.style.color=gc;ge.style.animation='none';void ge.offsetWidth;ge.style.animation='';
@@ -873,13 +903,13 @@ function hud(){
   }else if(st.mode==='play'||st.mode==='over'){
     const step=(t-st.t0)/SD,sh=G.shells[st.i],{n,L,left}=counts(),res=G.mag[st.i],v=st.guess,dlr=st.who==='dlr';
     const cert=step>=8&&L===left?' = '+tc(CR,'1'):step>=8&&L===0?' = '+tc(CC,'0'):'';
-    const P=`P(\\text{LIVE}) = \\tfrac{${L}}{${left}}${cert}`;
+    const P=run.diff==='hard'?`P(\\text{LIVE}) = \\tfrac{?}{${left}}`:run.diff==='easy'?`P(\\text{LIVE}) = \\tfrac{${L}}{${left}} \\approx ${Math.round(100*L/left)}\\%`:`P(\\text{LIVE}) = \\tfrac{${L}}{${left}}${cert}`;
     // riff line
     if(!st.rev){if(sh.style==='boss'){const bits=G.mag.map((b,j)=>j<st.i&&!(run.mode==='survival'&&run.k>=7)?b:'?').join('\\,');B=step<16?`${bits} = \\text{this magazine}`:sh.m2}
-                else B=step<16?sh.m1:sh.m2}
+                else{const k=run.diff==='easy'?'e':run.diff==='hard'?'h':'m';B=step<16?(sh[k+'1']||sh.m1):(sh[k+'2']||sh.m2)}}
     else B=res?(sh.style==='boss'?'s=-2:\\;\\; 808 + \\text{saw wall} + \\text{bells}':sh.reese?'s=-2:\\;\\; f/4\\;\\;\\text{LIVE (Reese + 808)}':'s=-2:\\;\\; f/4\\;\\;\\text{LIVE (distorted 808)}')
               :'s=+1:\\;\\; 2f\\;\\;\\text{BLANK (glass bells + pad)}';
-    const g_=st.gamma>1?'\\cdot 1.25':'',pv=v===null?null:payOf(v),pay=pv&&pv.K?Math.round(100*pv.w*st.gamma*M):0;
+    const g_=st.gamma>1?'\\cdot 1.25':'',pv=v===null?null:payOf(v),pay=pv&&pv.K?Math.round(100*pv.w*st.gamma*M*D().k):0;
     let payC;
     if(v===null)payC=st.locked?`\\text{LOCK}\\;\\Rightarrow\\;\\varnothing`:`\\Delta\\Sigma = 100\\,\\omega\\,\\gamma\\times ${M}`;
     else if(!pv.K)payC=`P = 0\\;\\Rightarrow\\;\\Delta\\Sigma = 0`;
@@ -906,7 +936,7 @@ function hud(){
     }
     // button small lines: payout multipliers (no words)
     if(st.mode==='play'){
-      const wl=L?left/L:0,wb=left-L?left/(left-L):0,fx=w=>w?'×'+fmtW(w):'×—';
+      const wl=L?left/L:0,wb=left-L?left/(left-L):0,fx=w=>run.diff==='hard'?'×?':w?'×'+fmtW(w):'×—';
       let sl=fx(wl),sb=fx(wb);
       if(m==='duel'&&!dlr){sl='→DLR '+sl;sb='→YOU '+sb}
       if(st.rev){const okL=v===1&&res===1,okB=v===0&&res===0;
@@ -1029,10 +1059,31 @@ function topRow(t){
 }
 // shells shown big (live first), shuffled, then flown into the row. plan: shuffle start a, fly start b, landed c; drop: shells drop in one per tick
 // drop: [start, max gap between shells]; text: the reel's "LIVE or BLANK? GUESS RIGHT. ...OR ELSE." sequence
-const INTRO_PLAN={a:1.25,b:2.7,c:3.2,flash:4.5,drop:[.05,.11],labels:1,text:1},RELOAD_PLAN={a:2.0,b:3.2,c:3.7,drop:[.25,.25],labels:1};
+const INTRO_PLAN={video:1,a:1.25,b:2.7,c:3.2,flash:4.5,drop:[.05,.11],labels:1,text:1},RELOAD_PLAN={a:2.0,b:3.2,c:3.7,drop:[.25,.25],labels:1};
 const dropAt=(plan,j,n)=>plan.drop[0]+j*Math.min(plan.drop[1],(plan.drop[0]<.1?.9:1.75)/n);
+// the reel's first second: coloured magazine -> '?' -> rattle -> loaded one by one into the row, a green ring on each slot
+const LOAD0=.8,LOADG=.22,LOADD=.3,loadAt=j=>LOAD0+j*LOADG;
+function introVideo(T,n,L){
+  const bs=Math.min(73,600/Math.max(1,n-1)),pos=j=>360+(j-(n-1)/2)*bs,hj=j=>Math.sin(j*12.9898+n*78.233)*.5;
+  if(T<.75){const al=Math.min(1,Math.max(0,(.62-T)/.17))*Math.min(1,T/.12);
+    if(al>0){g.save();g.globalAlpha=al;g.textAlign='center';g.textBaseline='alphabetic';const xl=L?(pos(0)+pos(L-1))/2:360,xb=n-L?(pos(L)+pos(n-1))/2:360;
+      g.font='700 30px "Barlow Semi Condensed"';g.shadowBlur=14;
+      if(L){g.fillStyle='#ff2d55';g.shadowColor='#ff2d55';g.fillText(`${L} LIVE`,xl,744)}if(n-L){g.fillStyle='#62e6ff';g.shadowColor='#62e6ff';g.fillText(`${n-L} BLANK`,xb,744)}
+      g.shadowBlur=0;g.font='600 15px "Barlow Semi Condensed"';g.fillStyle='#cfd8d2';if(L)g.fillText('the riff drops 2 octaves',xl,768);if(n-L)g.fillText('it turns into bells',xb,768);g.restore()}}
+  for(let j=0;j<n;j++){let cx=pos(j),top=578,w=52,h=120,kind=j<L?'live':'blank',gl=.8,al=Math.min(1,T/.12);
+    if(T>.45){kind='unknown';gl=0}
+    if(T>.5&&T<LOAD0+.2){const e=Math.sin(Math.min(1,(T-.5)/.3)*Math.PI/2);top=578-70*hj(j)*e+Math.sin(T*40+j*2)*4*e;cx+=(hj(j+3))*14*e}
+    const tl=loadAt(j);
+    if(T>=tl){const k=Math.min(1,(T-tl)/LOADD),e=1-Math.pow(1-k,3),y0=578-70*hj(j);
+      cx=lerp(pos(j)+hj(j+3)*14,rowX(j,n),e);top=lerp(y0,ROW.top,e)-Math.sin(k*Math.PI)*60;w=lerp(52,ROW.w,e);h=lerp(120,ROW.h,e)}
+    drawShell(cx,top,w,h,kind,gl,al);
+    // landing ring on the slot
+    const kr=(T-tl-LOADD)/.4;if(kr>=0&&kr<1){g.save();g.globalAlpha=1-kr;g.strokeStyle='#6dffa0';g.shadowColor='#6dffa0';g.shadowBlur=16;g.lineWidth=3;
+      g.beginPath();g.arc(rowX(j,n),ROW.top+ROW.h/2,22+26*kr,0,7);g.stroke();g.restore()}}
+}
 function introDraw(t,T0,n,L,plan){
   const T=t-T0,bs=Math.min(73,600/Math.max(1,n-1)),pos=j=>360+(j-(n-1)/2)*bs,{a,b,c}=plan;
+  if(plan.video){introVideo(T,n,L);introText(T,plan);return}
   if(!st.perm||st.perm.length!==n)st.perm=shuffle([...Array(n).keys()],Math.random);
   // labels under the loaded magazine (fade out when the shuffle starts)
   if(plan.labels&&T<a+.3){const al=Math.min(1,Math.max(0,(T-dropAt(plan,n-1,n))/.25))*Math.max(0,Math.min(1,(a+.3-T)/.3));
@@ -1054,6 +1105,9 @@ function introDraw(t,T0,n,L,plan){
     if(T>=b){const k=Math.min(1,(T-b)/(c-b)),e=1-Math.pow(1-k,3);
       cx=lerp(pos(st.perm[j]),rowX(st.perm[j],n),e);top=lerp(578,ROW.top,e);w=lerp(52,ROW.w,e);h=lerp(120,ROW.h,e);kind='unknown';gl=0}
     drawShell(cx,top,w,h,kind,gl)}
+  introText(T,plan);
+}
+function introText(T,plan){
   if(plan.text&&T>3.0){const fade=Math.max(0,Math.min(1,(INTRO-.1-T)/.5));g.save();g.textBaseline='alphabetic';
     // LIVE or BLANK? slams in, GUESS RIGHT. types in, ...OR ELSE. hits with the gunshot
     const k=Math.min(1,(T-3)/.18),sc=1+.5*(1-k)*(1-k);g.globalAlpha=k*fade;
@@ -1113,7 +1167,14 @@ function frame(){
     if(st.mode==='play')drawLock(step);
     topRow(t);
     const res=G.mag[st.i],oc=st.rev?(res?'r':'c'):null;let head=null;
-    for(const l of st.pre){const h=drawLayer(l,Math.min(cur,PRE),oc,true);if(!st.rev&&h)head=h}
+    // on the reveal a band sweeps left to right and recolours the riff (yellow -> red / cyan) as it passes
+    const tT=st.t0+PRE*SD,bk=st.rev?(t-tT)/.42:1;
+    if(st.rev&&bk<1&&st.mode==='play'){const bx=lerp(GX0-30,GXT+20,Math.max(0,bk));
+      g.save();g.beginPath();g.rect(bx,0,720,1280);g.clip();for(const l of st.pre)drawLayer(l,Math.min(cur,PRE),null,true);g.restore();
+      g.save();g.beginPath();g.rect(0,0,bx,1280);g.clip();for(const l of st.pre)drawLayer(l,Math.min(cur,PRE),oc,true);g.restore();
+      const bc=res?'255,40,80':'110,230,255',gr=g.createLinearGradient(bx-40,0,bx+14,0);gr.addColorStop(0,`rgba(${bc},0)`);gr.addColorStop(.75,`rgba(${bc},.45)`);gr.addColorStop(1,`rgba(${bc},.9)`);
+      g.fillStyle=gr;g.fillRect(bx-40,GY0-10,54,GY1-GY0+20)}
+    else for(const l of st.pre){const h=drawLayer(l,Math.min(cur,PRE),oc,true);if(!st.rev&&h)head=h}
     if(st.rev)for(const l of st.post){const h=drawLayer(l,cur,null,false);if(h)head=h}
     ticks(st.rev?[...st.pre,...st.post]:st.pre,cur);
     if(head&&st.mode==='play')dot(head.x,head.y,head.col);
@@ -1130,8 +1191,17 @@ function frame(){
   if(st.mode==='title')$('press').style.visibility=(performance.now()/1000%1)<.6?'visible':'hidden';
   const fl=opt.flash?1:.3,fa=Math.max(0,1-(t-st.flashT)/.45),fe=$('flash');fe.style.background=st.flashCol;fe.style.opacity=fa*(st.flashCol.includes('255,60,90')?fl:1);
   const sk=st.paused||!opt.shake?0:Math.max(0,1-(t-st.shakeT)/.5),s=stage.dataset.s,A=st.shakeAmp||22;
-  stage.style.transform=`scale(${s}) translate(${(Math.random()-.5)*A*sk}px,${(Math.random()-.5)*A*sk}px)`;
-  stage.style.filter=sk>0?`saturate(${1+sk}) contrast(${1+.2*sk})`:'';
+  const ab=st.paused?0:Math.max(0,1-(t-st.shakeT)/.4),zoom=1+.035*ab*ab;   // chromatic split + punch-in on every LIVE hit
+  stage.style.transform=`scale(${s*zoom}) translate(${(Math.random()-.5)*A*sk}px,${(Math.random()-.5)*A*sk}px)`;
+  if(ab>0){const d=(3+11*ab).toFixed(1);$('rgbR').setAttribute('dx',d);$('rgbC').setAttribute('dx',-d);$('rgbR').setAttribute('dy',(ab*2).toFixed(1))}
+  const fil=(ab>0?'url(#rgbx) ':'')+(sk>0?`saturate(${1+sk}) contrast(${1+.2*sk})`:'');if(stage.style.filter!==fil)stage.style.filter=fil;
+  // edges glow with the drop: red pulses on every kick after a LIVE, cold blue after a BLANK
+  let vg='radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,.75) 100%)';
+  if(st.mode==='play'&&st.rev){const ph=(((t-st.t0)/SD)%4+4)%4*SD,pu=Math.exp(-ph*7),live=G.mag[st.i];
+    vg=live?`radial-gradient(ellipse at center,transparent ${38-6*pu}%,rgba(${150+60*pu|0},0,30,${(.55+.3*pu).toFixed(2)}) 100%)`
+           :`radial-gradient(ellipse at center,transparent 42%,rgba(10,55,110,${(.5+.12*pu).toFixed(2)}) 100%)`}
+  else if(st.mode==='over'&&!run.won)vg='radial-gradient(ellipse at center,transparent 35%,rgba(120,0,20,.8) 100%)';
+  const ve=$('vig');if(ve._v!==vg){ve._v=vg;ve.style.background=vg}
   if(st.mode==='init'&&performance.now()>ini.deadline)initConfirm();
   grain();requestAnimationFrame(frame);
 }
@@ -1141,7 +1211,7 @@ function grain(){if(gf++%2)return;const d=gimg.data;for(let i=0;i<d.length;i+=4)
 // ---------- input ----------
 let uiLock=0;const tap=(id,fn)=>$(id).addEventListener('click',e=>{e.stopPropagation();if(performance.now()<uiLock)return;fn()});
 $('scrTitle').addEventListener('pointerdown',()=>{if(st.mode==='title')goMenu()});
-tap('mPrev',()=>menuMove(-1));tap('mNext',()=>menuMove(1));tap('mPlay',menuPlay);tap('card',menuPlay);
+tap('mPrev',()=>menuMove(-1));tap('dPrev',()=>setDiff(-1));tap('dNext',()=>setDiff(1));tap('mNext',()=>menuMove(1));tap('mPlay',menuPlay);tap('card',menuPlay);
 tap('mHof',()=>hofOpen(MODE_KEYS[menuIdx]));tap('mHow',()=>howOpen(false));tap('hBack',howClose);
 let swipeX=null;$('card').addEventListener('pointerdown',e=>{swipeX=e.clientX});
 $('card').addEventListener('pointerup',e=>{if(swipeX!==null&&Math.abs(e.clientX-swipeX)>60/(+stage.dataset.s||1)){menuMove(e.clientX<swipeX?1:-1);swipeX=-1e9}else swipeX=null});
@@ -1169,7 +1239,7 @@ addEventListener('keydown',e=>{const k=e.key.toLowerCase();
   if(e.repeat&&st.mode!=='init')return;
   switch(st.mode){
     case'title':if(!['shift','control','alt','meta','tab'].includes(k))goMenu();break;
-    case'menu':if(k==='arrowleft')menuMove(-1);else if(k==='arrowright')menuMove(1);else if(k==='enter'||k===' ')menuPlay();
+    case'menu':if(k==='arrowleft')menuMove(-1);else if(k==='arrowright')menuMove(1);else if(k==='enter'||k===' ')menuPlay();else if(k==='arrowup')setDiff(1);else if(k==='arrowdown')setDiff(-1);
       else if(k==='h')hofOpen(MODE_KEYS[menuIdx]);else if(k==='?'||k==='i')howOpen(false);else if(k==='escape'){V.tick(now(),.6);goTitle()}break;
     case'how':if(k==='escape'||k==='enter'||k===' ')howClose();break;
     case'hof':if(k==='arrowleft'||k==='arrowright'){hof.tab=(hof.tab+(k==='arrowleft'?-1:1)+4)%4;hof.hi=-1;V.tick(now(),.8);hofRender()}
