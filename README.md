@@ -11,6 +11,23 @@ Modes: Classic, Survival, VS Dealer, Daily Dealer. There is a local Hall of Fame
 
 Open `index.html` in a browser. KaTeX and the fonts load from a CDN.
 
+The game runs on desktop and mobile. On a wide screen, the portrait stage is centred, the sides show a blurred copy of the game, and `F` toggles fullscreen.
+
+## Code layout
+
+The scripts are plain `<script>` files loaded in order. There is no build step, so the game also works over `file://`.
+
+| File | Contents |
+|---|---|
+| `index.html` | Markup for the stage and every screen |
+| `css/style.css` | Styles |
+| `js/core.js` | Layout, persistence, timing, seeded RNG, music theory, riff generators |
+| `js/audio.js` | Web Audio engine: master chain, routes, synth voices |
+| `js/layers.js` | Note layers shared by picture and sound, scheduling, drums, KaTeX helpers |
+| `js/game.js` | State, modes, difficulty, leaderboard, title theme, screens, run logic, math HUD |
+| `js/render.js` | Canvas drawing: shells, scope, traces, intro animation |
+| `js/main.js` | Main loop, input, auto-pause |
+
 ## Deploy to GitHub Pages
 
 The workflow `.github/workflows/pages.yml` publishes the site on every push to `main`. One-time setup:
@@ -32,3 +49,4 @@ The game is then served at `https://<you>.github.io/beat-the-dealer/`.
 | `L` / `←` | LIVE |
 | `B` / `→` | BLANK |
 | `Esc` / `P` | Pause |
+| `F` | Fullscreen (menus) |
