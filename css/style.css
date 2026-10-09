@@ -12,7 +12,7 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Barlow 
 #math{top:842px;flex-direction:column;align-items:center;gap:8px;color:#e9e9e6;pointer-events:none}
 #math>div{white-space:nowrap;transform-origin:center center}
 #mA{font-size:30px}
-#mB{font-size:19px;color:#cfd2cc}
+#mB{font-size:25px;color:#e2e6df}
 #mC{font-size:22px}
 #mA.hurt{animation:hurt .3s}
 #mA.heal{animation:heal .5s}
@@ -150,3 +150,7 @@ body.wide #press{top:930px}
 body.wide #tTag{top:1010px}
 body.wide #legend{display:none}
 body.wide #amb{display:none}
+/* the likelier answer glows softly */
+.btn.live.fav{box-shadow:0 0 34px rgba(255,61,110,.75),inset 0 0 26px rgba(255,61,110,.35);transform:scale(1.04)}
+.btn.blank.fav{box-shadow:0 0 34px rgba(126,242,255,.7),inset 0 0 26px rgba(126,242,255,.32);transform:scale(1.04)}
+.btn small{font-size:17px;opacity:.9}

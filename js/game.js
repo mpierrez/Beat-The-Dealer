@@ -318,38 +318,44 @@ function hud(){
   if(!run)return;
   const m=run.mode,t=now(),M=Math.min(8,1+run.streak),sig=`\\Sigma = ${fmtT(run.sigma)}`;let A='',B='',C='';
   const YS=()=>`\\text{YOU}\\;${hearts(run.hp,run.H,CR)}`,DS=()=>`${hearts(run.hpD,run.H,VIO)}\\;\\text{DLR}`;
+  // what's left in the gun, in words: "3 LIVE + 4 BLANK"
+  const left2=(L,B,hide)=>hide?`?\\ ${tc(CR,'\\text{LIVE}')}\\;+\\;?\\ ${tc(CC,'\\text{BLANK}')}`
+    :`${L}\\ ${tc(CR,'\\text{LIVE}')}\\;+\\;${B}\\ ${tc(CC,'\\text{BLANK}')}`;
   if(st.mode==='intro'||st.mode==='reload'){
-    const n=G.mag.length,L=G.mag.reduce((a,b)=>a+b,0),mag=`\\text{mag} = ${magT(L,n-L)}`;
+    const n=G.mag.length,L=G.mag.reduce((a,b)=>a+b,0),mag=left2(L,n-L,false);
     if(m==='survival'){A=`${hearts(run.hp,run.hpMax,CR)}\\qquad ${mag}`;if(run.k>1)C=tc(OKC,'+'+fmtT(run.magBonus||0))+(run.healed?'\\quad '+tc(OKC,'\\heartsuit + 1'):'')}
     else if(m==='duel'){A=`${YS()}\\qquad ${DS()}`;B=mag;C=run.stageCard?`\\text{stage }\\mathrm{${roman(run.stage)}}`:''}
     else A=mag;
   }else if(st.mode==='play'||st.mode==='over'){
-    const step=(t-st.t0)/SD,sh=G.shells[st.i],{n,L,left}=counts(),res=G.mag[st.i],v=st.guess,dlr=st.who==='dlr';
-    const cert=step>=8&&L===left?' = '+tc(CR,'1'):step>=8&&L===0?' = '+tc(CC,'0'):'';
-    const P=run.diff==='hard'?`P(\\text{LIVE}) = \\tfrac{?}{${left}}`:run.diff==='easy'?`P(\\text{LIVE}) = \\tfrac{${L}}{${left}} \\approx ${Math.round(100*L/left)}\\%`:`P(\\text{LIVE}) = \\tfrac{${L}}{${left}}${cert}`;
-    // one formula per riff; after the trigger only what happened to it
-    if(!st.rev){const k=run.diff==='easy'?'e':run.diff==='hard'?'h':'m';
-      B=sh.style==='boss'?G.mag.map((b,j)=>j<st.i&&!(run.mode==='survival'&&run.k>=7)?b:'?').join('\\,'):(sh[k+'1']||sh.m1)}
-    else B=res?`\\text{LIVE}:\\;\\; f\\to f/4`:`\\text{BLANK}:\\;\\; f\\to 2f`;
+    const step=(t-st.t0)/SD,{n,L,left}=counts(),res=G.mag[st.i],v=st.guess,dlr=st.who==='dlr',hard=run.diff==='hard';
+    const pct=Math.round(100*L/left);
+    // line 1: what's left (this shell included). line 2: the chance, as a fraction and a percentage
+    const cnt=left2(L,left-L,hard);
+    const P=hard?`P(\\text{LIVE}) = \\;?`:L===left?`P(\\text{LIVE}) = ${tc(CR,'100\\%')}`:L===0?`P(\\text{LIVE}) = ${tc(CC,'0\\%')}`
+      :`P(\\text{LIVE}) = \\tfrac{${L}}{${left}} \\approx ${pct}\\%`;
     const ok=v!==null&&v===res,gain=ok?tc(OKC,'+'+fmtT(st.lastPay)):v===null?'\\varnothing':tc(BADC,'0');
     if(m==='duel'){
       A=`${dlr?YS():`\\boxed{${YS()}}`}\\qquad ${dlr?`\\boxed{${DS()}}`:DS()}`;
-      if(!st.rev)C=`${P}\\qquad ${sig}`+(dlr&&run.cpuCall!==null?`\\qquad \\text{DLR}\\to\\text{${run.cpuCall?'YOU':'DLR'}}`:'');
+      if(!st.rev){B=`${cnt}\\qquad ${P}`;C=dlr?(run.cpuCall===null?'\\text{DLR is aiming...}':`\\text{DLR}\\to\\text{${run.cpuCall?'YOU':'DLR'}}`):sig}
       else{const s=run.shot||{},tgt=s.c?(s.you?'DLR':'YOU'):(s.you?'YOU':'DLR');
-        C=(s.res?tc(CR,`\\heartsuit_{\\text{${tgt}}} - 1`):s.c?'\\varnothing':'\\text{turn} + 1')+(v!==null?`\\qquad ${gain}`:'')}
+        B=res?tc(CR,'\\text{LIVE}'):tc(CC,'\\text{BLANK}');
+        C=(s.res?tc(CR,`\\heartsuit_{\\text{${tgt}}} - 1`):s.c?'\\varnothing':'\\text{shoot again}')+(v!==null?`\\qquad ${gain}`:'')}
       if(st.mode==='over')C=run.won?`\\text{YOU WIN}`:`\\heartsuit = 0`;
     }else{
-      A=(m==='survival'?`${hearts(run.hp,run.hpMax,CR)}\\quad `:'')+`${P}\\qquad ${sig}`;
-      C=!st.rev?(M>1?`\\times ${M}`:''):gain+(ok&&M>0?`\\quad \\times ${Math.min(8,1+run.streak)}`:'');
+      A=(m==='survival'?`${hearts(run.hp,run.hpMax,CR)}\\quad `:'')+cnt;
+      B=!st.rev?P:(res?tc(CR,'\\text{LIVE}'):tc(CC,'\\text{BLANK}'));
+      C=`${sig}`+(!st.rev?(M>1?`\\quad \\times ${M}`:''):`\\qquad ${gain}`+(ok?`\\quad \\times ${Math.min(8,1+run.streak)}`:''));
       if(m==='survival'&&st.rev&&!ok)C+=`\\quad ${tc(CR,'\\heartsuit - 1')}`;
       if(st.rev&&run.perfect&&st.i===n-1&&step>=40)C=`\\text{PERFECT}\\;\\; ${tc(OKC,'+'+fmtT(run.perfect))}`;
       if(st.mode==='over')C=`\\heartsuit = 0`;
     }
-    // button small lines: payout multipliers (no words)
+    // buttons: chance of each answer + what it pays; the likelier answer glows (not in HARD)
     if(st.mode==='play'){
-      const wl=L?left/L:0,wb=left-L?left/(left-L):0,fx=w=>run.diff==='hard'?'×?':w?'×'+fmtW(w):'×—';
-      let sl=fx(wl),sb=fx(wb);
-      if(m==='duel'&&!dlr){sl='→DLR '+sl;sb='→YOU '+sb}
+      const pB=100-pct,pay=k=>k?Math.round(100*(left/k)*M*D().k):0;
+      let sl=hard?'?':L?`${pct}% · +${fmtD(pay(L))}`:'0%',sb=hard?'?':left-L?`${pB}% · +${fmtD(pay(left-L))}`:'0%';
+      if(m==='duel'&&!dlr){sl='→DLR  '+sl;sb='→YOU  '+sb}
+      const fav=hard||st.rev||v!==null||pct===50?0:pct>50?1:-1;
+      $('bL').classList.toggle('fav',fav===1);$('bB').classList.toggle('fav',fav===-1);
       if(st.rev){if(v===null){sl=sb=dlr?'':'∅'}
         else if(v===1)sl=ok?'✓ +'+fmtD(st.lastPay):'✗';else sb=ok?'✓ +'+fmtD(st.lastPay):'✗'}
       else if(st.locked&&v===null)sl=sb='—';
