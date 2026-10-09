@@ -694,7 +694,8 @@ function startRun(mode){
   const t=st.introT0,b=SD*4;
   routeTo(run.route,()=>{
     for(let k=0;k<9;k++){V.kick(t+k*b,k%4===0?1:.8);V.kick(t+k*b+b/2,.3)}
-    for(let k=0;k<12;k++)V.tick(t+1.2+k*SD*.5,1);
+    for(let j=0,n=G.mag.length;j<n;j++)V.clink(t+dropAt(INTRO_PLAN,j,n)+.16);   // shells landing
+    for(let k=0;k<12;k++)V.tick(t+1.25+k*SD*.5,1);
     V.pad(t+2.5,0,1.95,1.2);V.riser(t+3.5,1);V.gunshot(t+4.5)});
   hud();
 }
@@ -1027,18 +1028,48 @@ function topRow(t){
     const r=st.grid[j];if(r&&(j<st.i||st.rev||st.mode==='over')){g.fillStyle=BAR[r]||BAR.late;g.fillRect(cx-w/2,top+h+8,w,4)}}
 }
 // shells shown big (live first), shuffled, then flown into the row. plan: shuffle start a, fly start b, landed c; drop: shells drop in one per tick
-const INTRO_PLAN={a:1.2,b:2.7,c:3.2,flash:4.5},RELOAD_PLAN={a:2.0,b:3.2,c:3.7,drop:1};
+// drop: [start, max gap between shells]; text: the reel's "LIVE or BLANK? GUESS RIGHT. ...OR ELSE." sequence
+const INTRO_PLAN={a:1.25,b:2.7,c:3.2,flash:4.5,drop:[.05,.11],labels:1,text:1},RELOAD_PLAN={a:2.0,b:3.2,c:3.7,drop:[.25,.25],labels:1};
+const dropAt=(plan,j,n)=>plan.drop[0]+j*Math.min(plan.drop[1],(plan.drop[0]<.1?.9:1.75)/n);
 function introDraw(t,T0,n,L,plan){
   const T=t-T0,bs=Math.min(73,600/Math.max(1,n-1)),pos=j=>360+(j-(n-1)/2)*bs,{a,b,c}=plan;
   if(!st.perm||st.perm.length!==n)st.perm=shuffle([...Array(n).keys()],Math.random);
+  // labels under the loaded magazine (fade out when the shuffle starts)
+  if(plan.labels&&T<a+.3){const al=Math.min(1,Math.max(0,(T-dropAt(plan,n-1,n))/.25))*Math.max(0,Math.min(1,(a+.3-T)/.3));
+    if(al>0){g.save();g.globalAlpha=al;g.textAlign='center';g.textBaseline='alphabetic';
+      const xl=L?(pos(0)+pos(L-1))/2:360,xb=n-L?(pos(L)+pos(n-1))/2:360;
+      g.font='700 30px "Barlow Semi Condensed"';g.shadowBlur=14;
+      if(L){g.fillStyle='#ff2d55';g.shadowColor='#ff2d55';g.fillText(`${L} LIVE`,xl,744)}
+      if(n-L){g.fillStyle='#62e6ff';g.shadowColor='#62e6ff';g.fillText(`${n-L} BLANK`,xb,744)}
+      g.shadowBlur=0;g.font='600 15px "Barlow Semi Condensed"';g.fillStyle='#cfd8d2';
+      if(L)g.fillText('the riff drops 2 octaves',xl,768);if(n-L)g.fillText('it turns into bells',xb,768);g.restore()}}
   for(let j=0;j<n;j++){
     const kind0=j<L?'live':'blank';let cx=pos(j),top=578,w=52,h=120,kind=kind0,gl=.8;
-    if(plan.drop){const td=.25+j*Math.min(.25,1.75/n);if(T<td)continue;const k=Math.min(1,(T-td)/.15);top=lerp(-140,578,k*k)}
+    if(plan.drop&&T<a){const td=dropAt(plan,j,n);if(T<td)continue;
+      // fall, hit the table, small bounce
+      const k=(T-td)/.16;top=k<1?lerp(-140,578,k*k):578-18*Math.exp(-(k-1)*1.6)*Math.abs(Math.sin((k-1)*2.4));
+      if(k>=1&&k<1.6)gl=.8+1.2*(1.6-k)}
     if(T>a&&T<b){const k=(T-a)/(b-a),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
       cx=lerp(pos(j),pos(st.perm[j]),e);top=578-Math.sin(e*Math.PI)*(j%2?60:-40)-Math.abs(Math.sin(T*14+j))*10;kind=k>.35?'unknown':kind0;gl=k>.35?0:.8}
     if(T>=b){const k=Math.min(1,(T-b)/(c-b)),e=1-Math.pow(1-k,3);
       cx=lerp(pos(st.perm[j]),rowX(st.perm[j],n),e);top=lerp(578,ROW.top,e);w=lerp(52,ROW.w,e);h=lerp(120,ROW.h,e);kind='unknown';gl=0}
     drawShell(cx,top,w,h,kind,gl)}
+  if(plan.text&&T>3.0){const fade=Math.max(0,Math.min(1,(INTRO-.1-T)/.5));g.save();g.textBaseline='alphabetic';
+    // LIVE or BLANK? slams in, GUESS RIGHT. types in, ...OR ELSE. hits with the gunshot
+    const k=Math.min(1,(T-3)/.18),sc=1+.5*(1-k)*(1-k);g.globalAlpha=k*fade;
+    g.translate(360,598);g.scale(sc,sc);
+    g.font='700 58px "Barlow Semi Condensed"';const w1=g.measureText('LIVE').width;g.font='700 32px "Barlow Semi Condensed"';const w2=g.measureText(' or ').width;
+    g.font='700 58px "Barlow Semi Condensed"';const w3=g.measureText('BLANK?').width;let x=-(w1+w2+w3)/2;g.textAlign='left';
+    g.shadowBlur=20;g.shadowColor='#ff2d55';g.fillStyle='#ff2d55';g.fillText('LIVE',x,0);x+=w1;
+    g.shadowBlur=0;g.font='700 32px "Barlow Semi Condensed"';g.fillStyle='#fff';g.fillText(' or ',x,0);x+=w2;
+    g.font='700 58px "Barlow Semi Condensed"';g.shadowColor='#62e6ff';g.shadowBlur=20;g.fillStyle='#62e6ff';g.fillText('BLANK?',x,0);
+    g.setTransform(1,0,0,1,0,0);g.shadowBlur=0;g.textAlign='center';g.globalAlpha=fade;
+    if(T>3.5){const s='GUESS RIGHT.';g.font='700 36px "Barlow Semi Condensed"';g.fillStyle='#fff';g.fillText(s.slice(0,Math.ceil((T-3.5)/.05)),360,656)}
+    if(T>plan.flash){const j=Math.max(0,1-(T-plan.flash)/.25),dx=(Math.random()-.5)*14*j;
+      g.font='700 44px "Barlow Semi Condensed"';g.fillStyle='#ff2d55';g.shadowColor='#ff2d55';g.shadowBlur=24;
+      g.globalAlpha=fade*.5;g.fillStyle='#00e5ff';g.fillText('...OR ELSE.',360+dx-4*j,722);
+      g.globalAlpha=fade;g.fillStyle='#ff2d55';g.fillText('...OR ELSE.',360+dx,722)}
+    g.restore()}
   if(plan.flash&&T>plan.flash&&!st.introFlash){st.introFlash=1;st.flashT=now();st.flashCol='rgba(255,60,90,.55)';st.shakeT=now();st.tintTarget=[160,10,40,.7]}
 }
 
