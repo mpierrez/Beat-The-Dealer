@@ -1,52 +1,52 @@
 # Beat The Dealer
 
-*Buckshot Roulette, but it's math.* A browser arcade game: each shell plays a generated riff at 120 BPM. Call LIVE or BLANK before the trigger.
+*Buckshot Roulette, but it's math.* A browser game recreating an Instagram reel.
 
-- **LIVE**: the riff drops two octaves into a distorted 808.
-- **BLANK**: the riff turns into glass bells.
+Each shell plays one of the reel's formula riffs:
 
-Modes: Classic, Survival, VS Dealer, Daily Dealer. There is a local Hall of Fame for each mode.
+- `n² mod 8`
+- `(5x+3) mod 8`
+- `T_n mod 7`
+- a Reese bass
+- a mirrored arpeggio
+- 3 against 4
+- a Shepard tone
+- the final shell, which plays the magazine
 
-## Play locally
+Call **LIVE** or **BLANK** before the trigger. Then `f_out = f·2^s`:
 
-Open `index.html` in a browser. KaTeX and the fonts load from a CDN.
+| Shell | `s` | What happens |
+|---|---|---|
+| **LIVE** | −2 | The riff drops two octaves into a distorted 808 |
+| **BLANK** | +1 | The riff rises one octave into glass bells |
 
-The game runs on desktop and mobile. On a wide screen the stage stretches to the full width (same height, wider scope); on a phone it keeps the 9:16 reel frame. `F` toggles fullscreen.
+Modes: Classic, Survival and VS Dealer (your personal best is saved locally).
+
+## Develop
+
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm test
+npm run build    # production build in dist/
+```
 
 ## Code layout
 
-The scripts are plain `<script>` files loaded in order. There is no build step, so the game also works over `file://`.
+React handles the screens. The game engine is a TypeScript port of `legacy/` (the original vanilla version).
 
-| File | Contents |
+| Path | Contents |
 |---|---|
-| `index.html` | Markup for the stage and every screen |
-| `css/style.css` | Styles |
-| `js/core.js` | Layout, persistence, timing, seeded RNG, music theory, riff generators |
-| `js/audio.js` | Web Audio engine: master chain, routes, synth voices |
-| `js/layers.js` | Note layers shared by picture and sound, scheduling, drums, KaTeX helpers |
-| `js/game.js` | State, modes, difficulty, leaderboard, title theme, screens, run logic, math HUD |
-| `js/render.js` | Canvas drawing: shells, scope, traces, intro animation |
-| `js/main.js` | Main loop, input, auto-pause |
+| `src/engine/core.ts` | Constants, persistence, timing, graph geometry, randomness, music theory |
+| `src/engine/audio.ts` | Web Audio chain and every synth voice (with the phone / anti-crackle settings) |
+| `src/engine/riffs.ts` | The reel's 8 shells, with random variations each game |
+| `src/engine/layers.ts` | Notes for picture and sound, scheduling, drums |
+| `src/engine/game.ts` | Modes, title music, run logic, math HUD |
+| `src/engine/render.ts` | Canvas drawing and the per-frame loop |
+| `src/ui/store.ts` | What the screens display (written by the engine) |
+| `src/ui/screens.tsx`, `Stage.tsx`, `Tex.tsx` | React screens, using the same markup and CSS as legacy |
+| `src/styles/style.css` | The legacy stylesheet |
 
-## Deploy to GitHub Pages
+## Deploy
 
-The workflow `.github/workflows/pages.yml` publishes the site on every push to `main`. One-time setup:
-
-1. Create an empty repository on GitHub, for example `beat-the-dealer`.
-2. Connect it and push:
-   ```bash
-   git remote add origin https://github.com/<you>/beat-the-dealer.git
-   git push -u origin main
-   ```
-3. On GitHub, go to **Settings → Pages → Source** and choose **GitHub Actions**.
-
-The game is then served at `https://<you>.github.io/beat-the-dealer/`.
-
-## Controls
-
-| Key | Action |
-|---|---|
-| `L` / `←` | LIVE |
-| `B` / `→` | BLANK |
-| `Esc` / `P` | Pause |
-| `F` | Fullscreen (menus) |
+`.github/workflows/pages.yml` tests, builds and publishes `dist/` to GitHub Pages on every push to `main`. To enable it, go to **Settings → Pages → Source** and choose **GitHub Actions**.
